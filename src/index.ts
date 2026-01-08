@@ -72,28 +72,28 @@ Array:
 [
   {
     id: 1,
-    nombre: "Caudillo",
-    vida: 100,
-    fuerza: 100,
-    agilidad: 100,
-    suerte: 100,
+    name: "Caudillo",
+    hp: 100,
+    strength: 100,
+    agility: 100,
+    luck: 100,
     alive: true,
     run: true,
-    estado: {
-      nombre: "",
-      descripcion: ""
+    estate: {
+      name: "",
+      description: ""
     }
   }
 ];` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
-    player_id: '',
-    descripcion: '',
-    vida: '',
-    fuerza: '',
-    agilidad: '',
-    suerte: '',
+    id: '',
+    description: '',
+    hp: '',
+    strength: '',
+    agility: '',
+    luck: '',
     alive: '',
     run: 0,
     response: ''
@@ -167,12 +167,12 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
         const aliveResponse = await alivePrompt.response;
 
         gameResponse = {
-            player_id: '', // lo recibimos, de momento lo dejamos vacío
-            descripcion: '', // lo mismo
-            vida: vidaResponse.text(),
-            fuerza: fuerzaResponse.text(),
-            agilidad: agilidadResponse.text(),
-            suerte: suerteResponse.text(),
+            id: '', // lo recibimos, de momento lo dejamos vacío
+            description: '', // lo mismo
+            hp: vidaResponse.text(),
+            strength: fuerzaResponse.text(),
+            agility: agilidadResponse.text(),
+            luck: suerteResponse.text(),
             alive: aliveResponse.text(),
             run: 0,
             response: response.text()
@@ -186,10 +186,10 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
             ${response.text()}
 
             Player stats updated:
-            Vida: ${gameResponse.vida}
-            Fuerza: ${gameResponse.fuerza}
-            Agilidad: ${gameResponse.agilidad}
-            Suerte: ${gameResponse.suerte}
+            Vida: ${gameResponse.hp}
+            Fuerza: ${gameResponse.strength}
+            Agilidad: ${gameResponse.agility}
+            Suerte: ${gameResponse.luck}
             Alive: ${gameResponse.alive}
             `)
 
