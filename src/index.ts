@@ -212,13 +212,13 @@ app.post('/users', async (req, res) => {
 
         if (!id || !name) return res.status(400).json({ message: 'no hay id o nombre' });
 
-        const exists = await db.query('SELECT * FROM user WHERE id = $1', [id]);
+        const exists = await db.query('SELECT * FROM "user" WHERE id = $1', [id]);
         if (exists.rows.length > 0) {
             return res.status(200).json({ message: 'User existe', user: exists.rows[0] });
         }
 
         const created = await db.query(
-            'INSERT INTO user (id, name, coins) VALUES ($1, $2, $3) RETURNING *',  // ← Agregar coins
+            'INSERT INTO "user" (id, name, coins) VALUES ($1, $2, $3) RETURNING *',
             [id, name, coins]
         );
 
