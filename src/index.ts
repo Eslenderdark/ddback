@@ -12,20 +12,20 @@ app.use(express.json());
 import bodyParser from 'body-parser';
 const jsonParser = bodyParser.json();
 const character = [
-  {
-    id: 0,
-    name: "",
-    hp: 0,
-    strength: 0,
-    agility: 0,
-    luck: 0,
-    alive: true,
-    run: true,
-    estate: {
-      name: "",
-      description: ""
+    {
+        id: 0,
+        name: "",
+        hp: 0,
+        strength: 0,
+        agility: 0,
+        luck: 0,
+        alive: true,
+        run: true,
+        estate: {
+            name: "",
+            description: ""
+        }
     }
-  }
 ];
 
 const genAI = new GoogleGenerativeAI(env.environment.api_key)
@@ -83,7 +83,7 @@ las estadísticas por lo cual ten en cuenta de manera coherente lo que afecta un
 habilidades a la narrativa del juego, que una mejora muy pequeña no afecte mucho pero que una mayor mejora si que afecte mas,
 tendrás que usar el valor de nombre de la array como nombre para el personaje en la narrativa, también te tendrás que basar 
 en la descripción del personaje para aplicarla a la narrativa pero que esta descripción no afecte a las capacidades ni estadísticas
-del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida.` // Prompt inicial
+del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida.La array es {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
@@ -101,55 +101,55 @@ let userpromt = '' // Variable para almacenar la respuesta del usuario
 const chat = model.startChat({ //Creamos el chat donde se guardan las conversaciones para que el LLM tenga contexto y responda coherentemente
     history: [], // Empieza vacia
 })
- 
+
 app.get('/characterplay/:charId', async (req, res) => {
-  try {
-    const { charId } = req.params;
+    try {
+        const { charId } = req.params;
 
-    if (!charId) {
-      return res.status(400).json({ error: 'userId is required' });
-    }
+        if (!charId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
 
-    // Recuperamos el personaje del usuario (el más reciente o activo)
-    const result = await db.query(
-      `SELECT *
+        // Recuperamos el personaje del usuario (el más reciente o activo)
+        const result = await db.query(
+            `SELECT *
        FROM character
        WHERE id = $1`,
-      [charId]
-    );
+            [charId]
+        );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Character not found for this user' });
-    }
-
-    const char = result.rows[0];
-
-    // Construimos el array character en el formato del juego
-    const character = [
-      {
-        id: char.id,
-        name: char.name,
-        hp: char.hp,
-        strength: char.strength,
-        agility: char.agility,
-        luck: char.luck,
-        alive: char.alive,
-        run: char.run,
-        estate: char.state || {
-          name: "",
-          description: ""
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Character not found for this user' });
         }
-      }
-    ];
 
-    res.json(character);
+        const char = result.rows[0];
 
-    console.log('Character enviado al cliente:', character);
+        // Construimos el array character en el formato del juego
+        const character = [
+            {
+                id: char.id,
+                name: char.name,
+                hp: char.hp,
+                strength: char.strength,
+                agility: char.agility,
+                luck: char.luck,
+                alive: char.alive,
+                run: char.run,
+                estate: char.state || {
+                    name: "",
+                    description: ""
+                }
+            }
+        ];
 
-  } catch (err) {
-    console.error('Error en /characterplay:', err);
-    res.status(500).send('Internal Server Error');
-  }
+        res.json(character);
+
+        console.log('Character enviado al cliente:', character);
+
+    } catch (err) {
+        console.error('Error en /characterplay:', err);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 app.get('/gemini', async (req, res) => { // Endpoint para iniciar la aventura
@@ -160,7 +160,11 @@ app.get('/gemini', async (req, res) => { // Endpoint para iniciar la aventura
     //  Genera la aventura inicial
 
     try {
-        const result = await chat.sendMessage(promtNarrativa); // Enviamos el prompt inicial al LLM
+        const promptFinal = promtNarrativa.replace(
+            '{{CHARACTER_ARRAY}}',
+            JSON.stringify(character)
+        );
+        const result = await chat.sendMessage(promptFinal); // Enviamos el prompt inicial al LLM
         const response = await result.response;
 
         res.json(response.text()) // El ".text" es la respuesta string del LLM
@@ -200,7 +204,8 @@ app.post('/gemini', async (req, res) => {
 
         // Creamos el prompt final sustituyendo solo el array
         const promptFinal = promtNarrativa.replace(
-            /\[([^\]]*)\];/, JSON.stringify(characterArray)
+            '{{CHARACTER_ARRAY}}',
+            JSON.stringify(character)
         );
 
         const result = await chat.sendMessage(promptFinal);
@@ -377,88 +382,88 @@ app.get('/characters/user/:userId', async (req, res) => {
 
 //inventory endpoints
 
-app.get('/inventory/:userId', async (req,res)=>{
-  try{
-    const {userId}=req.params;
+app.get('/inventory/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
 
-    const inv=await db.query(
-      `SELECT * FROM inventory WHERE user_id=$1`,
-      [userId]
-    );
+        const inv = await db.query(
+            `SELECT * FROM inventory WHERE user_id=$1`,
+            [userId]
+        );
 
-    if(inv.rows.length==0)
-      return res.json({items:[]});
+        if (inv.rows.length == 0)
+            return res.json({ items: [] });
 
-    const slots=inv.rows[0];
+        const slots = inv.rows[0];
 
-    const itemIds=[
-      slots.item_1_id,
-      slots.item_2_id,
-      slots.item_3_id,
-      slots.item_4_id,
-      slots.item_5_id,
-      slots.item_6_id,
-      slots.item_7_id,
-      slots.item_8_id,
-      slots.item_9_id,
-      slots.item_10_id
-    ].filter(i=>i);
+        const itemIds = [
+            slots.item_1_id,
+            slots.item_2_id,
+            slots.item_3_id,
+            slots.item_4_id,
+            slots.item_5_id,
+            slots.item_6_id,
+            slots.item_7_id,
+            slots.item_8_id,
+            slots.item_9_id,
+            slots.item_10_id
+        ].filter(i => i);
 
-    if(itemIds.length==0)
-      return res.json({items:[]});
+        if (itemIds.length == 0)
+            return res.json({ items: [] });
 
-    const items=await db.query(
-      `SELECT * FROM item WHERE id = ANY($1)`,
-      [itemIds]
-    );
+        const items = await db.query(
+            `SELECT * FROM item WHERE id = ANY($1)`,
+            [itemIds]
+        );
 
-    res.json({items:items.rows});
+        res.json({ items: items.rows });
 
-  }catch(e){
-    console.error(e);
-    res.status(500).send("Error inventory");
-  }
+    } catch (e) {
+        console.error(e);
+        res.status(500).send("Error inventory");
+    }
 });
 
-app.post('/inventory/assign', async (req,res)=>{
-  const {itemId, characterId}=req.body;
+app.post('/inventory/assign', async (req, res) => {
+    const { itemId, characterId } = req.body;
 
-  await db.query(
-    `UPDATE item 
+    await db.query(
+        `UPDATE item 
      SET assigned_character=$1 
      WHERE id=$2`,
-    [characterId,itemId]
-  );
+        [characterId, itemId]
+    );
 
-  res.json({message:"Asignado"});
+    res.json({ message: "Asignado" });
 });
 
-app.post('/inventory/sell', async (req,res)=>{
-  const {itemId, price}=req.body;
+app.post('/inventory/sell', async (req, res) => {
+    const { itemId, price } = req.body;
 
-  // Usuario dueño
-  const owner=await db.query(
-    `SELECT user_id FROM inventory 
+    // Usuario dueño
+    const owner = await db.query(
+        `SELECT user_id FROM inventory 
      WHERE $1 IN (
       item_1_id,item_2_id,item_3_id,item_4_id,item_5_id,
       item_6_id,item_7_id,item_8_id,item_9_id,item_10_id
      )`,
-    [itemId]
-  );
+        [itemId]
+    );
 
-  const userId=owner.rows[0].user_id;
+    const userId = owner.rows[0].user_id;
 
-  // Añadir monedas
-  await db.query(
-    `UPDATE "user" 
+    // Añadir monedas
+    await db.query(
+        `UPDATE "user" 
      SET coins=coins+$1 
      WHERE id=$2`,
-    [price,userId]
-  );
+        [price, userId]
+    );
 
-  // Vaciar slot
-  await db.query(
-    `UPDATE inventory SET
+    // Vaciar slot
+    await db.query(
+        `UPDATE inventory SET
       item_1_id = CASE WHEN item_1_id=$1 THEN NULL ELSE item_1_id END,
       item_2_id = CASE WHEN item_2_id=$1 THEN NULL ELSE item_2_id END,
       item_3_id = CASE WHEN item_3_id=$1 THEN NULL ELSE item_3_id END,
@@ -470,23 +475,23 @@ app.post('/inventory/sell', async (req,res)=>{
       item_9_id = CASE WHEN item_9_id=$1 THEN NULL ELSE item_9_id END,
       item_10_id= CASE WHEN item_10_id=$1 THEN NULL ELSE item_10_id END
      WHERE user_id=$2`,
-    [itemId,userId]
-  );
+        [itemId, userId]
+    );
 
-  res.json({message:"Vendido"});
+    res.json({ message: "Vendido" });
 });
 
-app.post('/market/add', async (req,res)=>{
-  const {itemId,price}=req.body;
+app.post('/market/add', async (req, res) => {
+    const { itemId, price } = req.body;
 
-  await db.query(
-    `UPDATE item 
+    await db.query(
+        `UPDATE item 
      SET on_market=true, market_price=$1 
      WHERE id=$2`,
-    [price,itemId]
-  );
+        [price, itemId]
+    );
 
-  res.json({message:"Publicado"});
+    res.json({ message: "Publicado" });
 });
 
 
