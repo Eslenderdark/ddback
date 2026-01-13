@@ -108,27 +108,28 @@ const chat = model.startChat({ //Creamos el chat donde se guardan las conversaci
     history: [], // Empieza vacia
 })
 
-app.get('/characterplay/:charId', async (req, res) => {
+app.get('/gemini', async (req, res) => { // Endpoint para iniciar la aventura
+    console.log(`Petición recibida al endpoint GET /gemini`);
     try {
         const { charId } = req.params;
 
         if (!charId) {
-            return res.status(400).json({ error: 'userId is required' });
+            return res.status(400).json({ error: 'charId is required' });
         }
 
         // Recuperamos el personaje del usuario (el más reciente o activo)
-        const result = await db.query(
+        const resultchar = await db.query(
             `SELECT *
        FROM character
        WHERE id = $1`,
             [charId]
         );
 
-        if (result.rows.length === 0) {
+        if (resultchar.rows.length === 0) {
             return res.status(404).json({ error: 'Character not found for this user' });
         }
 
-        const char = result.rows[0];
+        const char = resultchar.rows[0];
 
         // Construimos el array character en el formato del juego
         const character = [
@@ -153,21 +154,12 @@ app.get('/characterplay/:charId', async (req, res) => {
 
         console.log('Character enviado al cliente:', character);
 
-    } catch (err) {
-        console.error('Error en /characterplay:', err);
-        res.status(500).send('Internal Server Error');
-    }
-});
+        const promptFinal = promtNarrativa.replace(
+            '{{CHARACTER_ARRAY}}',
+            JSON.stringify(character)
+        );
 
-app.get('/gemini', async (req, res) => { // Endpoint para iniciar la aventura
-    console.log(`Petición recibida al endpoint GET /gemini`);
-
-    //  Enviar personaje como objeto por API
-
-    //  Genera la aventura inicial
-
-    try {
-        const result = await chat.sendMessage(promtNarrativa); // Enviamos el prompt inicial al LLM
+        const result = await chat.sendMessage(promptFinal); // Enviamos el prompt inicial al LLM
         const response = await result.response;
 
         res.json(response.text()) // El ".text" es la respuesta string del LLM
@@ -184,6 +176,7 @@ app.get('/gemini', async (req, res) => { // Endpoint para iniciar la aventura
 
 app.post('/gemini', async (req, res) => {
     console.log('Petición recibida al endpoint POST /gemini');
+    
 
     try {
         const character = req.body.character; // Recibimos el personaje del frontend
