@@ -328,6 +328,121 @@ app.get('/characters/user/:userId', async (req, res) => {
     }
 });
 
+//inventory endpoints
+
+app.get('/inventory/:userId', async (req,res)=>{
+  try{
+    const {userId}=req.params;
+
+    const inv=await db.query(
+      `SELECT * FROM inventory WHERE user_id=$1`,
+      [userId]
+    );
+
+    if(inv.rows.length==0)
+      return res.json({items:[]});
+
+    const slots=inv.rows[0];
+
+    const itemIds=[
+      slots.item_1_id,
+      slots.item_2_id,
+      slots.item_3_id,
+      slots.item_4_id,
+      slots.item_5_id,
+      slots.item_6_id,
+      slots.item_7_id,
+      slots.item_8_id,
+      slots.item_9_id,
+      slots.item_10_id
+    ].filter(i=>i);
+
+    if(itemIds.length==0)
+      return res.json({items:[]});
+
+    const items=await db.query(
+      `SELECT * FROM item WHERE id = ANY($1)`,
+      [itemIds]
+    );
+
+    res.json({items:items.rows});
+
+  }catch(e){
+    console.error(e);
+    res.status(500).send("Error inventory");
+  }
+});
+
+app.post('/inventory/assign', async (req,res)=>{
+  const {itemId, characterId}=req.body;
+
+  await db.query(
+    `UPDATE item 
+     SET assigned_character=$1 
+     WHERE id=$2`,
+    [characterId,itemId]
+  );
+
+  res.json({message:"Asignado"});
+});
+
+app.post('/inventory/sell', async (req,res)=>{
+  const {itemId, price}=req.body;
+
+  // Usuario dueño
+  const owner=await db.query(
+    `SELECT user_id FROM inventory 
+     WHERE $1 IN (
+      item_1_id,item_2_id,item_3_id,item_4_id,item_5_id,
+      item_6_id,item_7_id,item_8_id,item_9_id,item_10_id
+     )`,
+    [itemId]
+  );
+
+  const userId=owner.rows[0].user_id;
+
+  // Añadir monedas
+  await db.query(
+    `UPDATE "user" 
+     SET coins=coins+$1 
+     WHERE id=$2`,
+    [price,userId]
+  );
+
+  // Vaciar slot
+  await db.query(
+    `UPDATE inventory SET
+      item_1_id = CASE WHEN item_1_id=$1 THEN NULL ELSE item_1_id END,
+      item_2_id = CASE WHEN item_2_id=$1 THEN NULL ELSE item_2_id END,
+      item_3_id = CASE WHEN item_3_id=$1 THEN NULL ELSE item_3_id END,
+      item_4_id = CASE WHEN item_4_id=$1 THEN NULL ELSE item_4_id END,
+      item_5_id = CASE WHEN item_5_id=$1 THEN NULL ELSE item_5_id END,
+      item_6_id = CASE WHEN item_6_id=$1 THEN NULL ELSE item_6_id END,
+      item_7_id = CASE WHEN item_7_id=$1 THEN NULL ELSE item_7_id END,
+      item_8_id = CASE WHEN item_8_id=$1 THEN NULL ELSE item_8_id END,
+      item_9_id = CASE WHEN item_9_id=$1 THEN NULL ELSE item_9_id END,
+      item_10_id= CASE WHEN item_10_id=$1 THEN NULL ELSE item_10_id END
+     WHERE user_id=$2`,
+    [itemId,userId]
+  );
+
+  res.json({message:"Vendido"});
+});
+
+app.post('/market/add', async (req,res)=>{
+  const {itemId,price}=req.body;
+
+  await db.query(
+    `UPDATE item 
+     SET on_market=true, market_price=$1 
+     WHERE id=$2`,
+    [price,itemId]
+  );
+
+  res.json({message:"Publicado"});
+});
+
+
 const port = 3000;
 
 app.listen(port, () =>
