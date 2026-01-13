@@ -11,6 +11,22 @@ app.use(express.json());
 
 import bodyParser from 'body-parser';
 const jsonParser = bodyParser.json();
+const character = [
+  {
+    id: 0,
+    name: "",
+    hp: 0,
+    strength: 0,
+    agility: 0,
+    luck: 0,
+    alive: true,
+    run: true,
+    estate: {
+      name: "",
+      description: ""
+    }
+  }
+];
 
 const genAI = new GoogleGenerativeAI(env.environment.api_key)
 const promtNarrativa = `Créame el comienzo de una historia de fantasía estilo dungeons and dragons para un juego, 
@@ -67,24 +83,7 @@ las estadísticas por lo cual ten en cuenta de manera coherente lo que afecta un
 habilidades a la narrativa del juego, que una mejora muy pequeña no afecte mucho pero que una mayor mejora si que afecte mas,
 tendrás que usar el valor de nombre de la array como nombre para el personaje en la narrativa, también te tendrás que basar 
 en la descripción del personaje para aplicarla a la narrativa pero que esta descripción no afecte a las capacidades ni estadísticas
-del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida. En este intento no no esperes mas arrays.
-Array:
-[
-  {
-    id: 1,
-    name: "Caudillo",
-    hp: 100,
-    strength: 100,
-    agility: 100,
-    luck: 100,
-    alive: true,
-    run: true,
-    estate: {
-      name: "",
-      description: ""
-    }
-  }
-];` // Prompt inicial
+del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida.` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
@@ -102,8 +101,56 @@ let userpromt = '' // Variable para almacenar la respuesta del usuario
 const chat = model.startChat({ //Creamos el chat donde se guardan las conversaciones para que el LLM tenga contexto y responda coherentemente
     history: [], // Empieza vacia
 })
+ 
+app.get('/characterplay/:charId', async (req, res) => {
+  try {
+    const { charId } = req.params;
 
+    if (!charId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
 
+    // Recuperamos el personaje del usuario (el más reciente o activo)
+    const result = await db.query(
+      `SELECT *
+       FROM character
+       WHERE id = $1`,
+      [charId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Character not found for this user' });
+    }
+
+    const char = result.rows[0];
+
+    // Construimos el array character en el formato del juego
+    const character = [
+      {
+        id: char.id,
+        name: char.name,
+        hp: char.hp,
+        strength: char.strength,
+        agility: char.agility,
+        luck: char.luck,
+        alive: char.alive,
+        run: char.run,
+        estate: char.state || {
+          name: "",
+          description: ""
+        }
+      }
+    ];
+
+    res.json(character);
+
+    console.log('Character enviado al cliente:', character);
+
+  } catch (err) {
+    console.error('Error en /characterplay:', err);
+    res.status(500).send('Internal Server Error');
+  }
+});
 
 app.get('/gemini', async (req, res) => { // Endpoint para iniciar la aventura
     console.log(`Petición recibida al endpoint GET /gemini`);
