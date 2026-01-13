@@ -219,7 +219,7 @@ app.post('/gemini', async (req, res) => {
 });
 
 
-
+//AÑADIR EL CAMBIO DE LAS ESTADISTICAS DEL CHARACTER
 app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal para responder a las opciones del usuario
     console.log(`Petición recibida al endpoint GET /geminiresponse/:option`);
 
