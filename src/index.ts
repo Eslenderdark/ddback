@@ -244,32 +244,49 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
 
 
 //user
-
 app.post('/users', async (req, res) => {
-    try {
-        console.log('BODY:', req.body);
-        const id = req.body.id;
-        const name = req.body.name;
-        const coins = req.body.coins || 0;
+  try {
+    console.log('BODY:', req.body);
+    const { id, name, coins = 0 } = req.body;
 
-        if (!id || !name) return res.status(400).json({ message: 'no hay id o nombre' });
+    if (!id || !name)
+      return res.status(400).json({ message: 'no hay id o nombre' });
 
-        const exists = await db.query('SELECT * FROM "user" WHERE id = $1', [id]);
-        if (exists.rows.length > 0) {
-            return res.status(200).json({ message: 'User existe', user: exists.rows[0] });
-        }
+    const exists = await db.query(
+      'SELECT * FROM "user" WHERE id = $1',
+      [id]
+    );
 
-        const created = await db.query(
-            'INSERT INTO "user" (id, name, coins,user_inventory_id) VALUES ($1, $2, $3, $4) RETURNING *',
-            [id, name, coins, 0]
-        );
-
-        return res.status(201).json({ message: 'User created', user: created.rows[0] });
-    } catch (e) {
-        console.error(e);
-        res.status(500).send('Internal Server Error');
+    if (exists.rows.length > 0) {
+      return res.status(200).json({
+        message: 'User existe',
+        user: exists.rows[0]
+      });
     }
+
+    // 1️⃣ Crear usuario
+    const created = await db.query(
+      'INSERT INTO "user" (id, name, coins) VALUES ($1,$2,$3) RETURNING *',
+      [id, name, coins]
+    );
+
+    // 2️⃣ Crear inventario vacío
+    await db.query(
+      'INSERT INTO inventory (user_id) VALUES ($1)',
+      [id]
+    );
+
+    return res.status(201).json({
+      message: 'User + inventory creados',
+      user: created.rows[0]
+    });
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Internal Server Error');
+  }
 });
+
 
 // Creacion de personajes
 
@@ -452,4 +469,5 @@ app.listen(port, () =>
     
     -   /gemini
     -   /geminiresponse
+    -   
      `));
