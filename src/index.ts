@@ -83,7 +83,8 @@ las estadísticas por lo cual ten en cuenta de manera coherente lo que afecta un
 habilidades a la narrativa del juego, que una mejora muy pequeña no afecte mucho pero que una mayor mejora si que afecte mas,
 tendrás que usar el valor de nombre de la array como nombre para el personaje en la narrativa, también te tendrás que basar 
 en la descripción del personaje para aplicarla a la narrativa pero que esta descripción no afecte a las capacidades ni estadísticas
-del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida.La array es {{CHARACTER_ARRAY}}` // Prompt inicial
+del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida.El array del personaje es este
+{{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
@@ -160,11 +161,7 @@ app.get('/gemini', async (req, res) => { // Endpoint para iniciar la aventura
     //  Genera la aventura inicial
 
     try {
-        const promptFinal = promtNarrativa.replace(
-            '{{CHARACTER_ARRAY}}',
-            JSON.stringify(character)
-        );
-        const result = await chat.sendMessage(promptFinal); // Enviamos el prompt inicial al LLM
+        const result = await chat.sendMessage(promtNarrativa); // Enviamos el prompt inicial al LLM
         const response = await result.response;
 
         res.json(response.text()) // El ".text" es la respuesta string del LLM
