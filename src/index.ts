@@ -24,7 +24,8 @@ const character = [
         estate: {
             name: "",
             description: ""
-        }
+        },
+        xp: 0
     }
 ];
 
@@ -83,8 +84,11 @@ las estadísticas por lo cual ten en cuenta de manera coherente lo que afecta un
 habilidades a la narrativa del juego, que una mejora muy pequeña no afecte mucho pero que una mayor mejora si que afecte mas,
 tendrás que usar el valor de nombre de la array como nombre para el personaje en la narrativa, también te tendrás que basar 
 en la descripción del personaje para aplicarla a la narrativa pero que esta descripción no afecte a las capacidades ni estadísticas
-del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida.El array del personaje es este
-{{CHARACTER_ARRAY}}` // Prompt inicial
+del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida. Depemdiemdo de las acciones realizadas
+y la dificultad de las mismas le debes de dar una catidad de experiencia al jugador, teniendo en cuenta que el maximo que puedes
+ganar por partida es 100 puntos de experiencia, entonces añade muy poca experiencia por accion para que el completar la
+mision principal sea lo que te de la cantidad de experiencia maxima (100)
+El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
@@ -96,6 +100,7 @@ let gameResponse = {
     luck: '',
     alive: '',
     run: 0,
+    xp: 0,
     response: ''
 }
 let userpromt = '' // Variable para almacenar la respuesta del usuario
@@ -139,7 +144,8 @@ app.get('/characterplay/:charId', async (req, res) => {
                 estate: char.state || {
                     name: "",
                     description: ""
-                }
+                },
+                xp: char.xp || 0
             }
         ];
 
@@ -195,7 +201,8 @@ app.post('/gemini', async (req, res) => {
                 luck: character.luck,
                 alive: character.alive,
                 run: true,
-                estate: character.state || { name: '', description: '' }
+                estate: character.state || { name: '', description: '' },
+                xp: character.xp || 0
             }
         ];
 
@@ -266,6 +273,7 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
             luck: suerteResponse.text(),
             alive: aliveResponse.text(),
             run: 0,
+            xp: 0,
             response: response.text()
         }
 
