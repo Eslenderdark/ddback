@@ -304,7 +304,7 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
 app.post('/users', async (req, res) => {
   try {
     console.log('BODY:', req.body);
-    const { id, name, coins = 0 } = req.body;
+    const { id, name, coins = 0, xp = 0 } = req.body;
 
     if (!id || !name)
       return res.status(400).json({ message: 'no hay id o nombre' });
@@ -323,8 +323,8 @@ app.post('/users', async (req, res) => {
 
     // 1️⃣ Crear usuario
     const created = await db.query(
-      'INSERT INTO "user" (id, name, coins) VALUES ($1,$2,$3) RETURNING *',
-      [id, name, coins]
+      'INSERT INTO "user" (id, name, coins, xp) VALUES ($1,$2,$3,$4) RETURNING *',
+      [id, name, coins, xp]
     );
 
     // 2️⃣ Crear inventario vacío
