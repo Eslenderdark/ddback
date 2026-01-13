@@ -108,7 +108,7 @@ const chat = model.startChat({ //Creamos el chat donde se guardan las conversaci
     history: [], // Empieza vacia
 })
 
-app.get('/gemini', async (req, res) => { // Endpoint para iniciar la aventura
+app.get('/gemini/:charId', async (req, res) => { // Endpoint para iniciar la aventura
     console.log(`Petición recibida al endpoint GET /gemini`);
     try {
         const { charId } = req.params;
