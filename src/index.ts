@@ -99,7 +99,7 @@ let gameResponse = {
     agility: '',
     luck: '',
     alive: '',
-    run: 0,
+    run: '',
     xp: 0,
     response: ''
 }
@@ -211,7 +211,7 @@ app.get('/gemini/:charId', async (req, res) => {
 // });
 
 
-
+//AÑADIR EL CAMBIO DE LAS ESTADISTICAS DEL CHARACTER
 app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal para responder a las opciones del usuario
     console.log(`Petición recibida al endpoint GET /geminiresponse/:option`);
 
@@ -244,6 +244,11 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
         const suertePrompt = await chat.sendMessage('Dame solo el numero de la suerte actual, despues de la última acción realizada sin ningún texto adicional ni explicación, solo el número.');
         const suerteResponse = await suertePrompt.response;
 
+        // Preguntamos xp
+
+        const xpPrompt = await chat.sendMessage('Dame solo el numero de la xp actual, despues de la última acción realizada sin ningún texto adicional ni explicación, solo el número.');
+        const xpResponse = await xpPrompt.response;
+
         // Preguntamos si estamos vivos
 
         const alivePrompt = await chat.sendMessage('Dime solo true o false si el jugador sigue vivo despues de la última acción realizada, sin ningún texto adicional ni explicación, solo true o false.'); // Pedimos solo si estamos vivos
@@ -257,10 +262,17 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
             agility: agilidadResponse.text(),
             luck: suerteResponse.text(),
             alive: aliveResponse.text(),
-            run: 0,
-            xp: 0,
+            run: String(character[0].run), // La partida sigue en curso
+            xp: Number(character[0].xp) + Number(xpResponse.text()), // Sumamos la xp obtenida a la xp actual del personaje
             response: response.text()
         }
+
+        character[0].hp = Number(gameResponse.hp)
+        character[0].strength = Number(gameResponse.strength)
+        character[0].agility = Number(gameResponse.agility)
+        character[0].luck = Number(gameResponse.luck)
+        character[0].alive = (gameResponse.alive === 'true')
+        character[0].xp = gameResponse.xp
 
         res.json(gameResponse) // Devolvemos el objeto con la respuesta y las estadísticas actualizadas
 
