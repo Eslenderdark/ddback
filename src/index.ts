@@ -21,7 +21,7 @@ const character = [
         luck: 0,
         alive: true,
         run: true,
-        estate: {
+        state: {
             name: "",
             description: ""
         },
@@ -108,115 +108,107 @@ const chat = model.startChat({ //Creamos el chat donde se guardan las conversaci
     history: [], // Empieza vacia
 })
 
-app.get('/gemini/:charId', async (req, res) => { // Endpoint para iniciar la aventura
-    console.log(`Petición recibida al endpoint GET /gemini`);
+app.get('/gemini/:charId', async (req, res) => {
     try {
         const { charId } = req.params;
 
         if (!charId) {
-            return res.status(400).json({ error: 'charId is required' });
+            return res.status(400).json({ error: 'charId es requerido' });
         }
 
-        // Recuperamos el personaje del usuario (el más reciente o activo)
-        const resultchar = await db.query(
-            `SELECT *
-       FROM character
-       WHERE id = $1`,
+        // 1. Cargar personaje específico
+        const result = await db.query(
+            `SELECT id, name, hp, strength, agility, luck, alive, run, state, xp
+       FROM "character" WHERE id = $1`,
             [charId]
         );
 
-        if (resultchar.rows.length === 0) {
-            return res.status(404).json({ error: 'Character not found for this user' });
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Personaje no encontrado' });
         }
 
-        const char = resultchar.rows[0];
+        const char = result.rows[0];
 
-        // Construimos el array character en el formato del juego
-        const character = [
-            {
-                id: char.id,
-                name: char.name,
-                hp: char.hp,
-                strength: char.strength,
-                agility: char.agility,
-                luck: char.luck,
-                alive: char.alive,
-                run: char.run,
-                estate: char.state || {
-                    name: "",
-                    description: ""
-                },
-                xp: char.xp || 0
-            }
-        ];
+        const characterArray = [{
+            id: char.id,
+            name: char.name,
+            hp: char.hp,
+            strength: char.strength,
+            agility: char.agility,
+            luck: char.luck,
+            alive: char.alive,
+            run: char.run,
+            state: char.state || { name: "", description: "" },
+            xp: char.xp || 0
+        }];
 
-        res.json(character);
-
-        console.log('Character enviado al cliente:', character);
-
+        // 3. Preparar prompt con el personaje concreto
         const promptFinal = promtNarrativa.replace(
             '{{CHARACTER_ARRAY}}',
-            JSON.stringify(character)
+            JSON.stringify(characterArray)
         );
 
-        const result = await chat.sendMessage(promptFinal); // Enviamos el prompt inicial al LLM
-        const response = await result.response;
+        // 4. Generar narrativa inicial
+        const geminiResult = await chat.sendMessage(promptFinal);
+        const narrative = (await geminiResult.response).text();
 
-        res.json(response.text()) // El ".text" es la respuesta string del LLM
+        // 5. Respuesta única y completa para el frontend
+        res.json({
+            character: characterArray[0],     // personaje fresco (con id real)
+            narrative: narrative              // texto inicial de la historia
+        });
 
-        //Enviar el array antes de elegir las opciones
-        console.log('Respuesta enviada al cliente: ' + JSON.stringify(response.text()));
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Internal Server Error on the initial promt');
-    }
-
-});
-
-app.post('/gemini', async (req, res) => {
-    console.log('Petición recibida al endpoint POST /gemini');
-    
-
-    try {
-        const character = req.body.character; // Recibimos el personaje del frontend
-
-        if (!character) return res.status(400).json({ error: 'No character provided' });
-
-        // Construimos el array inicial con los datos del personaje
-        const characterArray = [
-            {
-                id: character.id || 1,
-                name: character.name,
-                hp: character.hp,
-                strength: character.strength,
-                agility: character.agility,
-                luck: character.luck,
-                alive: character.alive,
-                run: true,
-                estate: character.state || { name: '', description: '' },
-                xp: character.xp || 0
-            }
-        ];
-
-        // Creamos el prompt final sustituyendo solo el array
-        const promptFinal = promtNarrativa.replace(
-            '{{CHARACTER_ARRAY}}',
-            JSON.stringify(character)
-        );
-
-        const result = await chat.sendMessage(promptFinal);
-        const response = await result.response;
-
-        res.json({ text: response.text() });
-
-        console.log('Respuesta enviada al cliente:', response.text());
+        console.log(`Partida iniciada para personaje ${charId}`);
 
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Internal Server Error on the initial prompt');
+        console.error('Error iniciando partida con Gemini:', err);
+        res.status(500).json({ error: 'Error al iniciar la aventura' });
     }
 });
+
+// app.post('/gemini', async (req, res) => {
+//     console.log('Petición recibida al endpoint POST /gemini');
+
+
+//     try {
+//         const character = req.body.character; // Recibimos el personaje del frontend
+
+//         if (!character) return res.status(400).json({ error: 'No character provided' });
+
+//         // Construimos el array inicial con los datos del personaje
+//         const characterArray = [
+//             {
+//                 id: character.id || 1,
+//                 name: character.name,
+//                 hp: character.hp,
+//                 strength: character.strength,
+//                 agility: character.agility,
+//                 luck: character.luck,
+//                 alive: character.alive,
+//                 run: true,
+//                 state: character.state || { name: '', description: '' },
+//                 xp: character.xp || 0
+//             }
+//         ];
+
+//         // Creamos el prompt final sustituyendo solo el array
+//         const promptFinal = promtNarrativa.replace(
+//             '{{CHARACTER_ARRAY}}',
+//             JSON.stringify(character)
+//         );
+
+//         const result = await chat.sendMessage(promptFinal);
+//         const response = await result.response;
+
+//         res.json({ text: response.text() });
+
+//         console.log('Respuesta enviada al cliente:', response.text());
+
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).send('Internal Server Error on the initial prompt');
+//     }
+// });
 
 
 
@@ -295,46 +287,46 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
 
 //user
 app.post('/users', async (req, res) => {
-  try {
-    console.log('BODY:', req.body);
-    const { id, name, coins = 0, xp = 0 } = req.body;
+    try {
+        console.log('BODY:', req.body);
+        const { id, name, coins = 0, xp = 0 } = req.body;
 
-    if (!id || !name)
-      return res.status(400).json({ message: 'no hay id o nombre' });
+        if (!id || !name)
+            return res.status(400).json({ message: 'no hay id o nombre' });
 
-    const exists = await db.query(
-      'SELECT * FROM "user" WHERE id = $1',
-      [id]
-    );
+        const exists = await db.query(
+            'SELECT * FROM "user" WHERE id = $1',
+            [id]
+        );
 
-    if (exists.rows.length > 0) {
-      return res.status(200).json({
-        message: 'User existe',
-        user: exists.rows[0]
-      });
+        if (exists.rows.length > 0) {
+            return res.status(200).json({
+                message: 'User existe',
+                user: exists.rows[0]
+            });
+        }
+
+        // 1️⃣ Crear usuario
+        const created = await db.query(
+            'INSERT INTO "user" (id, name, coins, xp) VALUES ($1,$2,$3,$4) RETURNING *',
+            [id, name, coins, xp]
+        );
+
+        // 2️⃣ Crear inventario vacío
+        await db.query(
+            'INSERT INTO inventory (user_id) VALUES ($1)',
+            [id]
+        );
+
+        return res.status(201).json({
+            message: 'User + inventory creados',
+            user: created.rows[0]
+        });
+
+    } catch (e) {
+        console.error(e);
+        res.status(500).send('Internal Server Error');
     }
-
-    // 1️⃣ Crear usuario
-    const created = await db.query(
-      'INSERT INTO "user" (id, name, coins, xp) VALUES ($1,$2,$3,$4) RETURNING *',
-      [id, name, coins, xp]
-    );
-
-    // 2️⃣ Crear inventario vacío
-    await db.query(
-      'INSERT INTO inventory (user_id) VALUES ($1)',
-      [id]
-    );
-
-    return res.status(201).json({
-      message: 'User + inventory creados',
-      user: created.rows[0]
-    });
-
-  } catch (e) {
-    console.error(e);
-    res.status(500).send('Internal Server Error');
-  }
 });
 
 
@@ -347,33 +339,40 @@ app.post('/characters', async (req, res) => {
             hp,
             strength,
             agility,
-            luck,
-            level,
-            next_level_xp,
-            current_level_xp,
-            alive,
-            run,
-            state,
-            user_id
+            luck = 1,
+            alive = true,
+            run = false,
+            state = {},
+            user_id,
+            xp = 0
         } = req.body;
 
-        // Validación mínima
         if (!name || !user_id) {
-            return res.status(400).json({ error: 'Name and user_id are required' });
+            return res.status(400).json({ error: 'name y user_id son obligatorios' });
         }
 
         const result = await db.query(
-            `INSERT INTO character
-        (name, hp, strength, agility, luck, level, next_level_xp, current_level_xp, alive, run, state, user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+            `INSERT INTO character 
+         (name, hp, strength, agility, luck, alive, run, state, user_id, xp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-            [name, hp, strength, agility, luck, level, next_level_xp, current_level_xp, alive, run, state, user_id]
+            [name, hp, strength, agility, luck, alive, run, state, user_id, xp]
         );
 
-        res.status(201).json({ message: 'Character created', character: result.rows[0] });
+        if (result.rowCount === 0) {
+            return res.status(500).json({ error: 'No se pudo crear el personaje' });
+        }
+
+        const newCharacter = result.rows[0];
+
+        res.status(201).json({
+            message: 'Personaje creado',
+            character: newCharacter   // ← aquí viene el id real
+        });
+
     } catch (err) {
-        console.error('Error creating character:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Error creando personaje:', err);
+        res.status(500).json({ error: 'Error interno al crear personaje' });
     }
 });
 
@@ -384,7 +383,7 @@ app.get('/characters/user/:userId', async (req, res) => {
         const { userId } = req.params;
 
         const result = await db.query(
-            `SELECT * FROM character WHERE user_id = $1 ORDER BY level DESC`,
+            `SELECT * FROM "character" WHERE user_id = $1`,
             [userId]
         );
 
