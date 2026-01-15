@@ -93,10 +93,10 @@ adecuado para un juego de fantasia y dungeons and dragons, tiene que ser bonito 
 extraños ni simbolos raros, intenta mostrar lo menos posibles las estadisticas del jugador en la narrativa, solo cuando sea necesario
 porque hayan sufrido algun cambio. El texto no lo alagrgues mucho unas 200 palabras y las elecciones A B y C separadas del
 texto principal, y que se vean bien separadas entre ellas y tampoco muy largas, acuerdate de al final de estas poner el nivel de
-dificultad de cada opcion.
+dificultad de cada opcion y que cada una sea completamente distinta a la otra.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" }); // Escogemos el modelo del LLM que queremos usar
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
     id: '',
     description: '',
