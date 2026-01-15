@@ -559,13 +559,33 @@ app.post('/market/add', async (req, res) => {
 });
 
 
+
+app.get('/getrankingbestplayers', async (req, res) => {
+  console.log('📡 /getrankingbestplayers CALLED');
+
+  try {
+    const result = await db.query(`SELECT * FROM character ORDER BY xp DESC;`);
+
+    console.log('RESULT FROM DB:', result);
+
+    res.json(result.rows);
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error getting ranking' });
+  }
+});
+
+
+
+
 const port = 3000;
 
 app.listen(port, () =>
     console.log(`App listening on PORT ${port}.
 
     ENDPOINTS:
-    
+    -   /getrankingbestplayers
     -   /gemini
     -   /geminiresponse
     -   
