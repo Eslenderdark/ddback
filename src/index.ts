@@ -226,60 +226,53 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
         userpromt = '' // Vaciamos la variable para que no se acumule la respuesta anterior
         userpromt = req.params.option
 
-        const statsPrompt = `
-Devuélveme OBLIGATORIAMENTE un JSON VÁLIDO, sin ningún texto adicional antes o después,
-con las estadísticas ACTUALES del jugador tras la última acción realizada.
-
-El formato debe ser EXACTAMENTE este:
-
-{
-  "hp": number,
-  "strength": number,
-  "agility": number,
-  "luck": number,
-  "alive": boolean,
-  "run": boolean,
-  "xp": number
-}
-
-NO añadas explicaciones.
-NO envíes texto fuera del JSON.
-NO encierres el JSON en comillas ni en bloques de código.
-`;
-
 
 
         console.log('Respuesta efectuada cargando promt...')
         const result = await chat.sendMessage(userpromt); // Se lo enviamos
         const response = await result.response;
 
-        const statsResult = await chat.sendMessage(statsPrompt);
-        const statsText = statsResult.response.text();
+        // Preguntamos vida 1
+        const vidaPrompt = await chat.sendMessage('Dame solo el numero de la vida actual, despues de la última acción realizada sin ningún texto adicional ni explicación, solo el número.'); // Pedimos solo la vida actual
+        const vidaResponse = await vidaPrompt.response;
 
-        let stats;
-        try {
-            stats = JSON.parse(statsText);
-        } catch (e) {
-            console.error('JSON inválido:', statsText);
-            return res.status(500).json({ error: 'Invalid stats JSON from Gemini' });
-        }
+        // Preguntamos fuerza 2
+
+        const fuerzaPrompt = await chat.sendMessage('Dame solo el numero de la fuerza actual, despues de la última acción realizada sin ningún texto adicional ni explicación, solo el número.'); // Pedimos solo la fuerza actual
+        const fuerzaResponse = await fuerzaPrompt.response;
+
+        // Preguntamos agilidad 3
+
+        const agilidadPrompt = await chat.sendMessage('Dame solo el numero de la agilidad actual, despues de la última acción realizada sin ningún texto adicional ni explicación, solo el número.'); // Pedimos solo la agilidad actual
+        const agilidadResponse = await agilidadPrompt.response;
+
+        // Preguntamos suerte 4
+
+        const suertePrompt = await chat.sendMessage('Dame solo el numero de la suerte actual, despues de la última acción realizada sin ningún texto adicional ni explicación, solo el número.');
+        const suerteResponse = await suertePrompt.response;
+
+        // Preguntamos xp 5
+
+        const xpPrompt = await chat.sendMessage('Dame solo el numero de la xp actual, despues de la última acción realizada sin ningún texto adicional ni explicación, solo el número.');
+        const xpResponse = await xpPrompt.response;
+
+        // Preguntamos si estamos vivos 6
+
+        const alivePrompt = await chat.sendMessage('Dime solo true o false si el jugador sigue vivo despues de la última acción realizada, sin ningún texto adicional ni explicación, solo true o false.'); // Pedimos solo si estamos vivos
+        const aliveResponse = await alivePrompt.response;
 
         gameResponse = {
-            id: '',
-            description:'',
-
-            hp: String(stats.hp),
-            strength: String(stats.strength),
-            agility: String(stats.agility),
-            luck: String(stats.luck),
-
-            alive: String(stats.alive),
-            run: String(stats.run),
-
-            xp: Number(character[0].xp) + Number(stats.xp || 0),
-
+            id: '', // lo recibimos, de momento lo dejamos vacío
+            description: '', // lo mismo
+            hp: vidaResponse.text(),
+            strength: fuerzaResponse.text(),
+            agility: agilidadResponse.text(),
+            luck: suerteResponse.text(),
+            alive: aliveResponse.text(),
+            run: String(character[0].run), // La partida sigue en curso
+            xp: Number(character[0].xp) + Number(xpResponse.text()), // Sumamos la xp obtenida a la xp actual del personaje
             response: response.text()
-        };
+        }
 
         character[0].hp = Number(gameResponse.hp)
         character[0].strength = Number(gameResponse.strength)
@@ -559,33 +552,13 @@ app.post('/market/add', async (req, res) => {
 });
 
 
-
-app.get('/getrankingbestplayers', async (req, res) => {
-  console.log('📡 /getrankingbestplayers CALLED');
-
-  try {
-    const result = await db.query(`SELECT * FROM character ORDER BY xp DESC;`);
-
-    console.log('RESULT FROM DB:', result);
-
-    res.json(result.rows);
-
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Error getting ranking' });
-  }
-});
-
-
-
-
 const port = 3000;
 
 app.listen(port, () =>
     console.log(`App listening on PORT ${port}.
 
     ENDPOINTS:
-    -   /getrankingbestplayers
+    
     -   /gemini
     -   /geminiresponse
     -   
