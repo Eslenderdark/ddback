@@ -271,10 +271,28 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
         character[0].strength = Number(gameResponse.strength)
         character[0].agility = Number(gameResponse.agility)
         character[0].luck = Number(gameResponse.luck)
-        character[0].alive = (gameResponse.alive === 'true')
+        character[0].alive = (gameResponse.alive === 'true' || gameResponse.alive === 'false')
         character[0].xp = gameResponse.xp
 
         res.json(gameResponse) // Devolvemos el objeto con la respuesta y las estadísticas actualizadas
+
+
+        const resultchar = await db.query(
+            `UPDATE character
+   SET
+     hp = $1,
+     strength = $2,
+     agility = $3,
+     luck = $4,
+     alive = $5,
+     run = $6,
+     state = $7,
+     xp = $8
+   WHERE id = $9
+   RETURNING *`,
+            [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, character[0].id]);
+
+        console.log('Personaje actualizado en la base de datos:', resultchar);
 
         console.log(`
 
@@ -288,6 +306,12 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
             Suerte: ${gameResponse.luck}
             Alive: ${gameResponse.alive}
             `)
+
+        if (character[0].alive === false) {
+            character[0].run = false // Si hemos muerto, la partida termina
+            //Mensaje de muerte
+            console.log(`EL PERSONAJE HA MUERTO. PARTIDA TERMINADA.`)
+        }
 
     } catch (err) {
         console.error(err);
