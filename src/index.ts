@@ -87,7 +87,13 @@ en la descripción del personaje para aplicarla a la narrativa pero que esta des
 del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida. Depemdiemdo de las acciones realizadas
 y la dificultad de las mismas le debes de dar una catidad de experiencia al jugador, teniendo en cuenta que el maximo que puedes
 ganar por partida es 100 puntos de experiencia, entonces añade muy poca experiencia por accion para que el completar la
-mision principal sea lo que te de la cantidad de experiencia maxima (100)
+mision principal sea lo que te de la cantidad de experiencia maxima (100). Piensa que el texto se va a mostrar en un juego
+asi que el formato debe de ser adecuado para ello, no uses saltos de linea innecesarios ni caracteres raros, usa un lenguaje
+adecuado para un juego de fantasia y dungeons and dragons, tiene que ser bonito de ver asi que no utilices carcteres
+extraños ni simbolos raros, intenta mostrar lo menos posibles las estadisticas del jugador en la narrativa, solo cuando sea necesario
+porque hayan sufrido algun cambio. El texto no lo alagrgues mucho unas 200 palabras y las elecciones A B y C separadas del
+texto principal, y que se vean bien separadas entre ellas y tampoco muy largas, acuerdate de al final de estas poner el nivel de
+dificultad de cada opcion.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
