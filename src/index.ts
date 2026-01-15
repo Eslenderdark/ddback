@@ -223,7 +223,7 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
     console.log(`Petición recibida al endpoint GET /geminiresponse/:option`);
 
     try {
-        userpromt = '' // Vaciamos la variable para que no se acumule la respuesta anterior
+        userpromt = ''  // Vaciamos la variable para que no se acumule la respuesta anterior
         userpromt = req.params.option
 
         const statsPrompt = `
