@@ -96,7 +96,7 @@ texto principal, y que se vean bien separadas entre ellas y tampoco muy largas, 
 dificultad de cada opcion.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
     id: '',
     description: '',
