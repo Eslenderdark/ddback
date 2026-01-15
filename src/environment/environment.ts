@@ -1,4 +1,4 @@
 
 export const environment = {
-  api_key: 'AIzaSyDyayC1ItLWecMe3d819zgTFxb2cCjYmf0'
+  api_key: 'AIzaSyAi08f40pGOjtbaQ0hwoadJdUgbhIxCEpQ'
 };
