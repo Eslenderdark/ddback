@@ -97,7 +97,10 @@ dificultad de cada opcion y que cada una sea completamente distinta a la otra. Y
 pasado. Muy importante recuerda que la narrativa que envies es un texto que se va a mostrar en el juego asi que no
 enseñes la array en el texto mejor pon los cambios de estadisticas por ejemplo si la vida estaba a 100 y recibe un daño
 de 20 ponle Vida: 80/100, si gana fuerza pon Fuerza: 110/100 etc... todo de esta forma clara y sencilla para que el jugador lo entienda bien
-y sea visualmente bonito.
+y sea visualmente bonito. Cuando te envie solo una letra A B o C tu me tienes que responder con la continuación de la historia
+sigue aplicando la norma de no mostrar la array en el texto y mostrar los cambios de estadísticas de forma visual y clara para el jugador
+al igual que la regla de no mostrar simbolos extraños como * o similares. Recuerda que si el jugador muere tienes que poner al final DEAD y si completa el objetivo principal VICTORIA
+y cambiar la estadistica de run si muere o gana la partida o la de alive si muere.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
