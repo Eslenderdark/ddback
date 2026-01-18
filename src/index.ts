@@ -94,7 +94,10 @@ extraños ni simbolos raros, intenta mostrar lo menos posibles las estadisticas 
 porque hayan sufrido algun cambio. El texto no lo alagrgues mucho unas 200 palabras y las elecciones A B y C separadas del
 texto principal, y que se vean bien separadas entre ellas y tampoco muy largas, acuerdate de al final de estas poner el nivel de
 dificultad de cada opcion y que cada una sea completamente distinta a la otra. Y no muestres nunca en el texto la array que te he
-pasado.
+pasado. Muy importante recuerda que la narrativa que envies es un texto que se va a mostrar en el juego asi que no
+enseñes la array en el texto mejor pon los cambios de estadisticas por ejemplo si la vida estaba a 100 y recibe un daño
+de 20 ponle Vida: 80/100, si gana fuerza pon Fuerza: 110/100 etc... todo de esta forma clara y sencilla para que el jugador lo entienda bien
+y sea visualmente bonito.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
