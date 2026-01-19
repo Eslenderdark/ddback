@@ -101,7 +101,8 @@ y sea visualmente bonito. Cuando te envie solo una letra A B o C tu me tienes qu
 sigue aplicando la norma de no mostrar la array en el texto y mostrar los cambios de estadísticas de forma visual y clara para el jugador
 al igual que la regla de no mostrar simbolos extraños como * o similares. Recuerda que si el jugador muere tienes que poner al final DEAD y si completa el objetivo principal VICTORIA
 y cambiar la estadistica de run si muere o gana la partida o la de alive si muere. SI el jugador muere en el proximo mensaje no 
-muestres las opciones A/B/C simplemente muestra el mensaje de que ha muerto y al final DEAD.
+muestres las opciones A/B/C simplemente muestra el mensaje de que ha muerto y al final DEAD. Al final no me pongas el JSON con 
+las estadisticas del personaje nunca enseñes el JSON raw en el texto.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
