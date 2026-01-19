@@ -64,8 +64,7 @@ aspecto, 100 es la base, el punto intermedio, las acciones que le ocurran al per
 estas estadísticas o modificarlas temporalmente, las estadísticas son, vida, fuerza: la cantidad de daño que realiza el 
 personaje, agilidad: la habilidad para acertar golpes, esquivar ataques, asestar críticos y moverse con mas libertad y 
 velocidad y la surte: cuanta mayor suerte mejores elecciones consigues, mejor suerte tienes en cada elección 
-(mas posibilidades de que salga beneficiosa) o que consigas mejores recompensas o mejoras de estadísticas en cada elección, 
-en cada turno tienes que mostrarme las estadísticas y como han variado dependiendo de la elección, las estadísticas se te 
+(mas posibilidades de que salga beneficiosa) o que consigas mejores recompensas o mejoras de estadísticas en cada elección, las estadísticas se te 
 enviaran en forma de array, después de cada elección, antes de elegir A, B o C se te enviara una array con todas las 
 estadísticas del personaje, tienes que modificarla con las variaciones que hayan surgido durante el turno y volvérmela 
 a enviar sin ningún tipo de texto, solo la array modificada para que después yo pueda procesarla con mi código, esta 
