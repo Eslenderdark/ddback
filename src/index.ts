@@ -172,6 +172,8 @@ app.get('/gemini/:charId', async (req, res) => {
         });
 
         console.log(`Partida iniciada para personaje ${charId}`);
+        console.log('Narrativa inicial enviada al cliente:', narrative);
+        
 
     } catch (err) {
         console.error('Error iniciando partida con Gemini:', err);
