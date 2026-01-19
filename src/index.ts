@@ -460,6 +460,25 @@ app.get('/characters/user/:userId', async (req, res) => {
     }
 });
 
+//Llamada para eliminar personaje por su ID
+
+app.delete('/characters/:charID', async (req, res) => {
+
+    try {
+        const { charID } = req.params;
+        // Eliminar el personaje por su ID
+        const result = await db.query(
+            `DELETE FROM "character" WHERE id = $1 RETURNING *`,
+            [charID]
+        );
+        res.json({ message: 'Personaje eliminado', character: result.rows[0] });
+    } catch (err) {
+        console.error('Error eliminando personaje:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+
 //inventory endpoints
 
 app.get('/inventory/:userId', async (req, res) => {
