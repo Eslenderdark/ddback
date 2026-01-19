@@ -94,19 +94,26 @@ extraños ni simbolos raros, intenta mostrar lo menos posibles las estadisticas 
 porque hayan sufrido algun cambio. El texto no lo alagrgues mucho unas 200 palabras y las elecciones A B y C separadas del
 texto principal, y que se vean bien separadas entre ellas y tampoco muy largas, acuerdate de al final de estas poner el nivel de
 dificultad de cada opcion y que cada una sea completamente distinta a la otra. Y no muestres nunca en el texto la array que te he
-pasado.
+pasado. Muy importante recuerda que la narrativa que envies es un texto que se va a mostrar en el juego asi que no
+enseñes la array en el texto mejor pon los cambios de estadisticas por ejemplo si la vida estaba a 100 y recibe un daño
+de 20 ponle Vida: 80/100, si gana fuerza pon Fuerza: 110/100 etc... todo de esta forma clara y sencilla para que el jugador lo entienda bien
+y sea visualmente bonito. Cuando te envie solo una letra A B o C tu me tienes que responder con la continuación de la historia
+sigue aplicando la norma de no mostrar la array en el texto y mostrar los cambios de estadísticas de forma visual y clara para el jugador
+al igual que la regla de no mostrar simbolos extraños como * o similares. Recuerda que si el jugador muere tienes que poner al final DEAD y si completa el objetivo principal VICTORIA
+y cambiar la estadistica de run si muere o gana la partida o la de alive si muere. SI el jugador muere en el proximo mensaje no 
+muestres las opciones A/B/C simplemente muestra el mensaje de que ha muerto y al final DEAD.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
     id: '',
     description: '',
-    hp: '',
-    strength: '',
-    agility: '',
-    luck: '',
-    alive: '',
-    run: '',
+    hp: 0,
+    strength: 0,
+    agility: 0,
+    luck: 0,
+    alive: true,
+    run: true,
     xp: 0,
     response: ''
 }
@@ -144,7 +151,7 @@ app.get('/gemini/:charId', async (req, res) => {
             agility: char.agility,
             luck: char.luck,
             alive: char.alive,
-            run: char.run,
+            run: true,
             state: char.state || { name: "", description: "" },
             xp: char.xp || 0
         }];
@@ -225,7 +232,7 @@ app.get('/geminiresponse/:option', async (req, res) => { // Llamada principal pa
     console.log(`Petición recibida al endpoint GET /geminiresponse/:option`);
 
     try {
-        userpromt = '' // Vaciamos la variable para que no se acumule la respuesta anterior
+        userpromt = ''  // Vaciamos la variable para que no se acumule la respuesta anterior
         userpromt = req.params.option
 
         const statsPrompt = `
@@ -270,13 +277,13 @@ NO encierres el JSON en comillas ni en bloques de código.
             id: '',
             description:'',
 
-            hp: String(stats.hp),
-            strength: String(stats.strength),
-            agility: String(stats.agility),
-            luck: String(stats.luck),
+            hp: stats.hp,
+            strength: stats.strength,
+            agility: stats.agility,
+            luck: stats.luck,
 
-            alive: String(stats.alive),
-            run: String(stats.run),
+            alive: stats.alive,
+            run: stats.run,
 
             xp: Number(character[0].xp) + Number(stats.xp || 0),
 
@@ -287,11 +294,24 @@ NO encierres el JSON en comillas ni en bloques de código.
         character[0].strength = Number(gameResponse.strength)
         character[0].agility = Number(gameResponse.agility)
         character[0].luck = Number(gameResponse.luck)
-        character[0].alive = (gameResponse.alive === 'true' || gameResponse.alive === 'false')
+        character[0].alive = (gameResponse.alive === true || gameResponse.alive === false)
         character[0].xp = gameResponse.xp
 
         res.json(gameResponse) // Devolvemos el objeto con la respuesta y las estadísticas actualizadas
 
+        // chaequeo de muerte y cambio de vida a 0 para que no explote el puto juego d los cojones y poner todo false por si la IA puto trolea
+        if (character[0].hp <= 0) {
+            character[0].alive = false
+            character[0].run = false
+            character[0].hp = 0
+            console.log('MUERTO')
+        }
+
+        //chequeo de victoria y añadir xp extra
+        if (character[0].run === false && character[0].alive === true){
+            character[0].xp += 100
+            console.log('VICTORIA')
+        }
 
         const resultchar = await db.query(
             `UPDATE character
@@ -322,12 +342,6 @@ NO encierres el JSON en comillas ni en bloques de código.
             Suerte: ${gameResponse.luck}
             Alive: ${gameResponse.alive}
             `)
-
-        if (character[0].alive === false) {
-            character[0].run = false // Si hemos muerto, la partida termina
-            //Mensaje de muerte
-            console.log(`EL PERSONAJE HA MUERTO. PARTIDA TERMINADA.`)
-        }
 
     } catch (err) {
         console.error(err);
