@@ -108,10 +108,10 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escoge
 let gameResponse = {
     id: '',
     description: '',
-    hp: '',
-    strength: '',
-    agility: '',
-    luck: '',
+    hp: 0,
+    strength: 0,
+    agility: 0,
+    luck: 0,
     alive: true,
     run: true,
     xp: 0,
@@ -275,10 +275,10 @@ NO encierres el JSON en comillas ni en bloques de código.
             id: '',
             description:'',
 
-            hp: String(stats.hp),
-            strength: String(stats.strength),
-            agility: String(stats.agility),
-            luck: String(stats.luck),
+            hp: stats.hp,
+            strength: stats.strength,
+            agility: stats.agility,
+            luck: stats.luck,
 
             alive: stats.alive,
             run: stats.run,
@@ -302,11 +302,13 @@ NO encierres el JSON en comillas ni en bloques de código.
             character[0].alive = false
             character[0].run = false
             character[0].hp = 0
+            console.log('MUERTO')
         }
 
         //chequeo de victoria y añadir xp extra
         if (character[0].run === false && character[0].alive === true){
             character[0].xp += 100
+            console.log('VICTORIA')
         }
 
         const resultchar = await db.query(
@@ -338,12 +340,6 @@ NO encierres el JSON en comillas ni en bloques de código.
             Suerte: ${gameResponse.luck}
             Alive: ${gameResponse.alive}
             `)
-
-        if (character[0].alive === false) {
-            character[0].run = false // Si hemos muerto, la partida termina
-            //Mensaje de muerte
-            console.log(`EL PERSONAJE HA MUERTO. PARTIDA TERMINADA.`)
-        }
 
     } catch (err) {
         console.error(err);
