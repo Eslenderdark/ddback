@@ -252,12 +252,13 @@ El formato debe ser EXACTAMENTE este:
   "xp": number
 }
 
-QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CON LOS VALORES ACTUALES DE LAS ESTADÍSTICAS.
 NO INCLUYAS NINGÚN TIPO DE TEXTO ADICIONAL DE JSON O DE COMILLAS
 NO añadas explicaciones.
 NO envíes texto fuera del JSON.
 NO encierres el JSON en comillas ni en bloques de código
 NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con el JSON.
+QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CON LOS VALORES ACTUALES DE LAS ESTADÍSTICAS.
+
 `;
 
 
