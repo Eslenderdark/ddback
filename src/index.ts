@@ -112,8 +112,8 @@ let gameResponse = {
     strength: '',
     agility: '',
     luck: '',
-    alive: '',
-    run: '',
+    alive: true,
+    run: true,
     xp: 0,
     response: ''
 }
@@ -151,7 +151,7 @@ app.get('/gemini/:charId', async (req, res) => {
             agility: char.agility,
             luck: char.luck,
             alive: char.alive,
-            run: char.run,
+            run: true,
             state: char.state || { name: "", description: "" },
             xp: char.xp || 0
         }];
@@ -280,8 +280,8 @@ NO encierres el JSON en comillas ni en bloques de código.
             agility: String(stats.agility),
             luck: String(stats.luck),
 
-            alive: String(stats.alive),
-            run: String(stats.run),
+            alive: stats.alive,
+            run: stats.run,
 
             xp: Number(character[0].xp) + Number(stats.xp || 0),
 
@@ -292,7 +292,7 @@ NO encierres el JSON en comillas ni en bloques de código.
         character[0].strength = Number(gameResponse.strength)
         character[0].agility = Number(gameResponse.agility)
         character[0].luck = Number(gameResponse.luck)
-        character[0].alive = (gameResponse.alive === 'true' || gameResponse.alive === 'false')
+        character[0].alive = (gameResponse.alive === true || gameResponse.alive === false)
         character[0].xp = gameResponse.xp
 
         res.json(gameResponse) // Devolvemos el objeto con la respuesta y las estadísticas actualizadas
@@ -302,6 +302,11 @@ NO encierres el JSON en comillas ni en bloques de código.
             character[0].alive = false
             character[0].run = false
             character[0].hp = 0
+        }
+
+        //chequeo de victoria y añadir xp extra
+        if (character[0].run === false && character[0].alive === true){
+            character[0].xp += 100
         }
 
         const resultchar = await db.query(
