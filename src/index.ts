@@ -250,7 +250,8 @@ El formato debe ser EXACTAMENTE este:
 
 NO añadas explicaciones.
 NO envíes texto fuera del JSON.
-NO encierres el JSON en comillas ni en bloques de código.
+NO encierres el JSON en comillas ni en bloques de código
+NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con la array.
 `;
 
 
@@ -321,8 +322,7 @@ NO encierres el JSON en comillas ni en bloques de código.
      run = $6,
      state = $7,
      xp = $8
-   WHERE id = $9
-   RETURNING *`,
+   WHERE id = $9`,
             [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, character[0].id]);
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
