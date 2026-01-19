@@ -262,19 +262,19 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 `;
 
 
-
+        
         console.log('Respuesta efectuada cargando promt...')
         const result = await chat.sendMessage(userpromt); // Se lo enviamos
         const response = await result.response;
 
         const statsResult = await chat.sendMessage(statsPrompt);
-        const statsText = statsResult.response.text();
+        const cleanStatsResult = extractBetweenBraces(statsResult.response.text());
 
         let stats;
         try {
-            stats = JSON.parse(statsText);
+            stats = cleanStatsResult ? JSON.parse(cleanStatsResult) : null;
         } catch (e) {
-            console.error('JSON inválido:', statsText);
+            console.error('JSON inválido:', cleanStatsResult);
             return res.status(500).json({ error: 'Invalid stats JSON from Gemini' });
         }
 
@@ -596,7 +596,16 @@ app.get('/getrankingbestplayers', async (req, res) => {
   }
 });
 
+function extractBetweenBraces(text: string): string | null {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
 
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+
+  return text.slice(start, end + 1);
+}
 
 
 const port = 3000;
