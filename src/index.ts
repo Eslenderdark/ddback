@@ -11,6 +11,7 @@ app.use(express.json());
 
 import bodyParser from 'body-parser';
 const jsonParser = bodyParser.json();
+let idchar = 0;
 const character = [
     {
         id: 0,
@@ -64,8 +65,7 @@ aspecto, 100 es la base, el punto intermedio, las acciones que le ocurran al per
 estas estadísticas o modificarlas temporalmente, las estadísticas son, vida, fuerza: la cantidad de daño que realiza el 
 personaje, agilidad: la habilidad para acertar golpes, esquivar ataques, asestar críticos y moverse con mas libertad y 
 velocidad y la surte: cuanta mayor suerte mejores elecciones consigues, mejor suerte tienes en cada elección 
-(mas posibilidades de que salga beneficiosa) o que consigas mejores recompensas o mejoras de estadísticas en cada elección, 
-en cada turno tienes que mostrarme las estadísticas y como han variado dependiendo de la elección, las estadísticas se te 
+(mas posibilidades de que salga beneficiosa) o que consigas mejores recompensas o mejoras de estadísticas en cada elección, las estadísticas se te 
 enviaran en forma de array, después de cada elección, antes de elegir A, B o C se te enviara una array con todas las 
 estadísticas del personaje, tienes que modificarla con las variaciones que hayan surgido durante el turno y volvérmela 
 a enviar sin ningún tipo de texto, solo la array modificada para que después yo pueda procesarla con mi código, esta 
@@ -106,7 +106,7 @@ El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
-    id: '',
+    id: 0,
     description: '',
     hp: 0,
     strength: 0,
@@ -126,6 +126,7 @@ app.get('/gemini/:charId', async (req, res) => {
     try {
         const { charId } = req.params;
 
+        idchar = Number(charId);
         if (!charId) {
             return res.status(400).json({ error: 'charId es requerido' });
         }
@@ -251,30 +252,34 @@ El formato debe ser EXACTAMENTE este:
   "xp": number
 }
 
+NO INCLUYAS NINGÚN TIPO DE TEXTO ADICIONAL DE JSON O DE COMILLAS
 NO añadas explicaciones.
 NO envíes texto fuera del JSON.
-NO encierres el JSON en comillas ni en bloques de código.
+NO encierres el JSON en comillas ni en bloques de código
+NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con el JSON.
+QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CON LOS VALORES ACTUALES DE LAS ESTADÍSTICAS.
+
 `;
 
 
-
+        
         console.log('Respuesta efectuada cargando promt...')
         const result = await chat.sendMessage(userpromt); // Se lo enviamos
         const response = await result.response;
 
         const statsResult = await chat.sendMessage(statsPrompt);
-        const statsText = statsResult.response.text();
+        const cleanStatsResult = extractBetweenBraces(statsResult.response.text());
 
         let stats;
         try {
-            stats = JSON.parse(statsText);
+            stats = cleanStatsResult ? JSON.parse(cleanStatsResult) : null;
         } catch (e) {
-            console.error('JSON inválido:', statsText);
+            console.error('JSON inválido:', cleanStatsResult);
             return res.status(500).json({ error: 'Invalid stats JSON from Gemini' });
         }
 
         gameResponse = {
-            id: '',
+            id: idchar,
             description:'',
 
             hp: stats.hp,
@@ -324,9 +329,8 @@ NO encierres el JSON en comillas ni en bloques de código.
      run = $6,
      state = $7,
      xp = $8
-   WHERE id = $9
-   RETURNING *`,
-            [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, character[0].id]);
+   WHERE id = $9`,
+            [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, idchar]);
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
 
@@ -611,7 +615,16 @@ app.get('/getrankingbestplayers', async (req, res) => {
   }
 });
 
+function extractBetweenBraces(text: string): string | null {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
 
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+
+  return text.slice(start, end + 1);
+}
 
 
 const port = 3000;
