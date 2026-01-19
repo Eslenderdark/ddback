@@ -11,6 +11,7 @@ app.use(express.json());
 
 import bodyParser from 'body-parser';
 const jsonParser = bodyParser.json();
+let idchar = 0;
 const character = [
     {
         id: 0,
@@ -105,7 +106,7 @@ El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
-    id: '',
+    id: 0,
     description: '',
     hp: 0,
     strength: 0,
@@ -125,6 +126,7 @@ app.get('/gemini/:charId', async (req, res) => {
     try {
         const { charId } = req.params;
 
+        idchar = Number(charId);
         if (!charId) {
             return res.status(400).json({ error: 'charId es requerido' });
         }
@@ -250,10 +252,12 @@ El formato debe ser EXACTAMENTE este:
   "xp": number
 }
 
+QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CON LOS VALORES ACTUALES DE LAS ESTADÍSTICAS.
+NO INCLUYAS NINGÚN TIPO DE TEXTO ADICIONAL DE JSON O DE COMILLAS
 NO añadas explicaciones.
 NO envíes texto fuera del JSON.
 NO encierres el JSON en comillas ni en bloques de código
-NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con la array.
+NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con el JSON.
 `;
 
 
@@ -274,7 +278,7 @@ NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabaj
         }
 
         gameResponse = {
-            id: '',
+            id: idchar,
             description:'',
 
             hp: stats.hp,
@@ -325,7 +329,7 @@ NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabaj
      state = $7,
      xp = $8
    WHERE id = $9`,
-            [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, character[0].id]);
+            [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, idchar]);
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
 
