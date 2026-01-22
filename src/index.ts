@@ -122,6 +122,26 @@ const chat = model.startChat({ //Creamos el chat donde se guardan las conversaci
     history: [], // Empieza vacia
 })
 
+// Función para actualizar el XP del usuario sumando el XP de todos sus personajes
+async function updateUserXP(userId: string | number) {
+    try {
+        const sumXpResult = await db.query(
+            `SELECT SUM(xp) as total_xp FROM character WHERE user_id = $1`,
+            [userId]
+        );
+        const totalXp = sumXpResult.rows[0].total_xp || 0;
+        await db.query(
+            `UPDATE "user" SET xp = $1 WHERE id = $2`,
+            [totalXp, userId]
+        );
+        console.log(`XP de usuario ${userId} actualizado a ${totalXp}`);
+        return totalXp;
+    } catch (err) {
+        console.error('Error actualizando XP de usuario:', err);
+        throw err;
+    }
+}
+
 app.get('/gemini/:charId', async (req, res) => {
     try {
         const { charId } = req.params;
@@ -329,8 +349,34 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
      run = $6,
      state = $7,
      xp = $8
-   WHERE id = $9`,
+   WHERE id = $9 RETURNING user_id`,
             [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, idchar]);
+
+        // Actualizar el XP del usuario sumando el XP de todos sus personajes
+        if (resultchar.rows.length > 0) {
+            const userId = resultchar.rows[0].user_id;
+            await updateUserXP(userId);
+        }
+
+            //actualizar xp de user
+        const userIdResult = await db.query(
+            `SELECT user_id FROM character WHERE id = $1`,
+            [idchar]
+        );
+        if (userIdResult.rows.length > 0) {
+            const userId = userIdResult.rows[0].user_id;
+            // 2. Sumar el xp de todos los personajes de ese usuario
+            const sumXpResult = await db.query(
+                `SELECT SUM(xp) as total_xp FROM character WHERE user_id = $1`,
+                [userId]
+            );
+            const totalXp = sumXpResult.rows[0].total_xp || 0;
+            // 3. Actualizar el xp del usuario
+            await db.query(
+                `UPDATE "user" SET xp = $1 WHERE id = $2`,
+                [totalXp, userId]
+            );
+        }
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
 
@@ -370,9 +416,16 @@ app.post('/users', async (req, res) => {
         );
 
         if (exists.rows.length > 0) {
+            // Actualizar el XP del usuario sumando el XP de todos sus personajes
+            await updateUserXP(id);
+            // Obtener los datos actualizados
+            const updated = await db.query(
+                'SELECT * FROM "user" WHERE id = $1',
+                [id]
+            );
             return res.status(200).json({
                 message: 'User existe',
-                user: exists.rows[0]
+                user: updated.rows[0]
             });
         }
 
@@ -475,6 +528,12 @@ app.delete('/characters/:charID', async (req, res) => {
             `DELETE FROM "character" WHERE id = $1 RETURNING *`,
             [charID]
         );
+        
+        // Actualizar el XP del usuario después de eliminar el personaje
+        if (result.rows.length > 0 && result.rows[0].user_id) {
+            await updateUserXP(result.rows[0].user_id);
+        }
+        
         res.json({ message: 'Personaje eliminado', character: result.rows[0] });
     } catch (err) {
         console.error('Error eliminando personaje:', err);
