@@ -321,7 +321,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             alive: stats.alive,
             run: stats.run,
 
-            xp: Number(character[0].xp) + Number(stats.xp || 0),
+            xp: stats.xp,
 
             response: response.text()
         };
@@ -367,26 +367,6 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         if (resultchar.rows.length > 0) {
             const userId = resultchar.rows[0].user_id;
             await updateUserXP(userId);
-        }
-
-        //actualizar xp de user
-        const userIdResult = await db.query(
-            `SELECT user_id FROM character WHERE id = $1`,
-            [idchar]
-        );
-        if (userIdResult.rows.length > 0) {
-            const userId = userIdResult.rows[0].user_id;
-            // 2. Sumar el xp de todos los personajes de ese usuario
-            const sumXpResult = await db.query(
-                `SELECT SUM(xp) as total_xp FROM character WHERE user_id = $1`,
-                [userId]
-            );
-            const totalXp = sumXpResult.rows[0].total_xp || 0;
-            // 3. Actualizar el xp del usuario
-            await db.query(
-                `UPDATE "user" SET xp = $1 WHERE id = $2`,
-                [totalXp, userId]
-            );
         }
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
