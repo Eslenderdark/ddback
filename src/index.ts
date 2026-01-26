@@ -112,7 +112,8 @@ ir dandole objetos a los jugadores despues de completar algunas acciones, objeto
 por lo tanto en las opciones A/B/C tendras que tener en cuenta que puedan usar esos objetos en las decisiones que tomen,
 tambien pueden subir su vida maxima por encima de 100 con ciertos objetos o acciones, asi que cuando ganen pon la vida del jugador
 al maximo que la haya tenido a lo largo de la partida, por ejemplo si un jugador ha llegado a tener 150 de vida y acaba la partida
-con una victoria y su vida es de 80 pues se la subes a 150, asi con lo maximo que haya sido para cada jugador. Las partidas deben
+con una victoria y su vida es de 80 pues se la subes a 150, asi con lo maximo que haya sido para cada jugador y siempre tiene que estar
+la vida en positivo nunca puede estar en negativo NUNCA. Las partidas deben
 de durar como minimo 8 elecciones de A/B/C a medida de que avanza la partida las recompensas son mayores al igual que los riesgos
 por lo que las mejoras de las estadisticas aumentan tambien, es decir si en la ronda 4 ganarias +5 de agiladad en la ronda 12 podrias 
 ganar +10 de agilidad por ejemplo recuerda no mostrar todas las estadisticas cada vez solo las que cambian. Ahora no no hay maximo de vida
@@ -319,7 +320,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             return res.status(500).json({ error: 'Invalid stats JSON from Gemini' });
         }
 
-        if (stats.hp < 0) {stats.hp = 0;}   // Aseguramos que la vida no sea negativa
+        if (stats.hp < 0) {
+            stats.hp = 0;
+        }   // Aseguramos que la vida no sea negativa
 
         gameResponse = {
             id: idchar,
@@ -360,6 +363,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             character[0].xp += 100
             console.log('VICTORIA')
         }
+
 
         const resultchar = await db.query(
             `UPDATE character
