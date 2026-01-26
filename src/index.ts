@@ -123,6 +123,26 @@ const chat = model.startChat({ //Creamos el chat donde se guardan las conversaci
     history: [], // Empieza vacia
 })
 
+// Función para actualizar el XP del usuario sumando el XP de todos sus personajes
+async function updateUserXP(userId: string | number) {
+    try {
+        const sumXpResult = await db.query(
+            `SELECT SUM(xp) as total_xp FROM character WHERE user_id = $1`,
+            [userId]
+        );
+        const totalXp = sumXpResult.rows[0].total_xp || 0;
+        await db.query(
+            `UPDATE "user" SET xp = $1 WHERE id = $2`,
+            [totalXp, userId]
+        );
+        console.log(`XP de usuario ${userId} actualizado a ${totalXp}`);
+        return totalXp;
+    } catch (err) {
+        console.error('Error actualizando XP de usuario:', err);
+        throw err;
+    }
+}
+
 app.get('/gemini/:charId', async (req, res) => {
     try {
         const { charId } = req.params;
@@ -176,7 +196,7 @@ app.get('/gemini/:charId', async (req, res) => {
 
         console.log(`Partida iniciada para personaje ${charId}`);
         console.log('Narrativa inicial enviada al cliente:', narrative);
-        
+
 
     } catch (err) {
         console.error('Error iniciando partida con Gemini:', err);
@@ -263,7 +283,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 `;
 
 
-        
+
         console.log('Respuesta efectuada cargando promt...')
         const result = await chat.sendMessage(userpromt); // Se lo enviamos
         const response = await result.response;
@@ -281,7 +301,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
         gameResponse = {
             id: idchar,
-            description:'',
+            description: '',
 
             hp: stats.hp,
             strength: stats.strength,
@@ -314,7 +334,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         }
 
         //chequeo de victoria y añadir xp extra
-        if (character[0].run === false && character[0].alive === true){
+        if (character[0].run === false && character[0].alive === true) {
             character[0].xp += 100
             console.log('VICTORIA')
         }
@@ -330,8 +350,34 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
      run = $6,
      state = $7,
      xp = $8
-   WHERE id = $9`,
+   WHERE id = $9 RETURNING user_id`,
             [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, idchar]);
+
+        // Actualizar el XP del usuario sumando el XP de todos sus personajes
+        if (resultchar.rows.length > 0) {
+            const userId = resultchar.rows[0].user_id;
+            await updateUserXP(userId);
+        }
+
+        //actualizar xp de user
+        const userIdResult = await db.query(
+            `SELECT user_id FROM character WHERE id = $1`,
+            [idchar]
+        );
+        if (userIdResult.rows.length > 0) {
+            const userId = userIdResult.rows[0].user_id;
+            // 2. Sumar el xp de todos los personajes de ese usuario
+            const sumXpResult = await db.query(
+                `SELECT SUM(xp) as total_xp FROM character WHERE user_id = $1`,
+                [userId]
+            );
+            const totalXp = sumXpResult.rows[0].total_xp || 0;
+            // 3. Actualizar el xp del usuario
+            await db.query(
+                `UPDATE "user" SET xp = $1 WHERE id = $2`,
+                [totalXp, userId]
+            );
+        }
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
 
@@ -371,9 +417,16 @@ app.post('/users', async (req, res) => {
         );
 
         if (exists.rows.length > 0) {
+            // Actualizar el XP del usuario sumando el XP de todos sus personajes
+            await updateUserXP(id);
+            // Obtener los datos actualizados
+            const updated = await db.query(
+                'SELECT * FROM "user" WHERE id = $1',
+                [id]
+            );
             return res.status(200).json({
                 message: 'User existe',
-                user: exists.rows[0]
+                user: updated.rows[0]
             });
         }
 
@@ -476,6 +529,12 @@ app.delete('/characters/:charID', async (req, res) => {
             `DELETE FROM "character" WHERE id = $1 RETURNING *`,
             [charID]
         );
+
+        // Actualizar el XP del usuario después de eliminar el personaje
+        if (result.rows.length > 0 && result.rows[0].user_id) {
+            await updateUserXP(result.rows[0].user_id);
+        }
+
         res.json({ message: 'Personaje eliminado', character: result.rows[0] });
     } catch (err) {
         console.error('Error eliminando personaje:', err);
@@ -601,31 +660,90 @@ app.post('/market/add', async (req, res) => {
 
 
 app.get('/getrankingbestplayers', async (req, res) => {
-  console.log('📡 /getrankingbestplayers CALLED');
+    console.log('📡 /getrankingbestplayers CALLED');
 
-  try {
-    const result = await db.query(`SELECT * FROM character ORDER BY xp DESC;`);
+    try {
+        const result = await db.query(`SELECT * FROM character ORDER BY xp DESC;`);
 
-    console.log('RESULT FROM DB:', result);
+        console.log('RESULT FROM DB:', result);
 
-    res.json(result.rows);
+        res.json(result.rows);
 
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Error getting ranking' });
-  }
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Error getting ranking' });
+    }
 });
 
 function extractBetweenBraces(text: string): string | null {
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
 
-  if (start === -1 || end === -1 || end <= start) {
-    return null;
-  }
+    if (start === -1 || end === -1 || end <= start) {
+        return null;
+    }
 
-  return text.slice(start, end + 1);
+    return text.slice(start, end + 1);
 }
+
+//llamada item-shop
+app.get('/item-shop', async (req, res) => {
+    try {
+        const comunes = (await db.query(`SELECT * FROM item WHERE rareza = 'común'`)).rows;
+        const pocoComunes = (await db.query(`SELECT * FROM item WHERE rareza = 'poco común'`)).rows;
+        const raros = (await db.query(`SELECT * FROM item WHERE rareza = 'raro'`)).rows;
+
+        const seleccionComunes = [];
+        const excludeIds = new Set();
+        let comunesDisponibles = comunes.slice();
+        for (let i = 0; i < 6 && comunesDisponibles.length > 0; i++) {
+            const idx = Math.floor(Math.random() * comunesDisponibles.length);
+            seleccionComunes.push(comunesDisponibles[idx]);
+            excludeIds.add(comunesDisponibles[idx].id);
+            comunesDisponibles.splice(idx, 1);
+        }
+
+        let pocoComunesDisponibles = pocoComunes.filter((item: any) => !excludeIds.has(item.id));
+        let seleccionPocoComunes = [];
+        if (pocoComunesDisponibles.length > 0) {
+            const idx = Math.floor(Math.random() * pocoComunesDisponibles.length);
+            seleccionPocoComunes.push(pocoComunesDisponibles[idx]);
+            excludeIds.add(pocoComunesDisponibles[idx].id);
+        }
+
+        //común 60%, poco común 30%, raro 10%
+        const rand = Math.random();
+        let extra = [];
+        if (rand < 0.6) {
+            let comunesRestantes = comunes.filter((item: any) => !excludeIds.has(item.id));
+            if (comunesRestantes.length > 0) {
+                const idx = Math.floor(Math.random() * comunesRestantes.length);
+                extra.push(comunesRestantes[idx]);
+                excludeIds.add(comunesRestantes[idx].id);
+            }
+        } else if (rand < 0.9) {
+            let pocoComunesRestantes = pocoComunes.filter((item: any) => !excludeIds.has(item.id));
+            if (pocoComunesRestantes.length > 0) {
+                const idx = Math.floor(Math.random() * pocoComunesRestantes.length);
+                extra.push(pocoComunesRestantes[idx]);
+                excludeIds.add(pocoComunesRestantes[idx].id);
+            }
+        } else {
+            let rarosRestantes = raros.filter((item: any) => !excludeIds.has(item.id));
+            if (rarosRestantes.length > 0) {
+                const idx = Math.floor(Math.random() * rarosRestantes.length);
+                extra.push(rarosRestantes[idx]);
+                excludeIds.add(rarosRestantes[idx].id);
+            }
+        }
+
+        const items = [...seleccionComunes, ...seleccionPocoComunes, ...extra];
+        res.json({ items });
+    } catch (e) {
+        console.error(e);
+        res.status(500).send("Error fetching item shop");
+    }
+});
 
 
 const port = 3000;
