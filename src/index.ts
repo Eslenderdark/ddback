@@ -117,7 +117,12 @@ de durar como minimo 8 elecciones de A/B/C a medida de que avanza la partida las
 por lo que las mejoras de las estadisticas aumentan tambien, es decir si en la ronda 4 ganarias +5 de agiladad en la ronda 12 podrias 
 ganar +10 de agilidad por ejemplo recuerda no mostrar todas las estadisticas cada vez solo las que cambian. Ahora no no hay maximo de vida
 ni de agilidad ni de suerte ni de fuerza, asi que no pongas maximos a las estadisticas del personaje. Solo marcame cual era la vida principal del personaje
-y como varia.
+y como varia. Manten la misma trama todo e tiempo y no tiene porque acabar la mision a la que muere el primer jefe, sino que puedes
+en las opciones A/B/C poner una opcion despues de derrotar al jefe de continuar o finalizar la mision principal, para que el jugador 
+tambien pueda decidir si quiere seguir con la aventura o no. Recuerda que la narrativa tiene que ser coherente con las estadísticas del personaje
+y sus estados, si el personaje tiene un estado de congelación no puedes narrar que corre rápido por ejemplo, adapta la narrativa
+a las estadísticas y estados del personaje. Y tambien el objetivo principal uede ser otro q no sea matar a un jefe. Cada vez que salga
+un enemigo marcame cuanta vida tiene con el siguiente formato: {{NOMBRE ENEMIGO}}: {{VIDA ENEMIGO}}.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
@@ -315,7 +320,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         }
 
         if (stats.hp < 0) {stats.hp = 0;}   // Aseguramos que la vida no sea negativa
-        
+
         gameResponse = {
             id: idchar,
             description: '',
