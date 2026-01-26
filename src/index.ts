@@ -91,7 +91,7 @@ mision principal sea lo que te de la cantidad de experiencia maxima (100). Piens
 asi que el formato debe de ser adecuado para ello, no uses saltos de linea innecesarios ni caracteres raros, usa un lenguaje
 adecuado para un juego de fantasia y dungeons and dragons, tiene que ser bonito de ver asi que no utilices carcteres
 extraños ni simbolos raros, intenta mostrar lo menos posibles las estadisticas del jugador en la narrativa, solo cuando sea necesario
-porque hayan sufrido algun cambio. El texto no lo alagrgues mucho unas 200 palabras y las elecciones A B y C separadas del
+porque hayan sufrido algun cambio. El texto no lo alagrgues mucho unas 100 palabras y las elecciones A B y C separadas del
 texto principal, y que se vean bien separadas entre ellas y tampoco muy largas, acuerdate de al final de estas poner el nivel de
 dificultad de cada opcion y que cada una sea completamente distinta a la otra. Y no muestres nunca en el texto la array que te he
 pasado. Muy importante recuerda que la narrativa que envies es un texto que se va a mostrar en el juego asi que no
@@ -102,7 +102,17 @@ sigue aplicando la norma de no mostrar la array en el texto y mostrar los cambio
 al igual que la regla de no mostrar simbolos extraños como * o similares. Recuerda que si el jugador muere tienes que poner al final DEAD y si completa el objetivo principal VICTORIA
 y cambiar la estadistica de run si muere o gana la partida o la de alive si muere. SI el jugador muere en el proximo mensaje no 
 muestres las opciones A/B/C simplemente muestra el mensaje de que ha muerto y al final DEAD. Al final no me pongas el JSON con 
-las estadisticas del personaje nunca enseñes el JSON raw en el texto.
+las estadisticas del personaje nunca enseñes el JSON raw en el texto. A la hora de devolver la respuesta cuando el jugador
+elige A/B/C el texto sigue teniendo que ser de maximo 100 palabras sin contr las opciones y tiene que ocupar solo una accion,
+por ejemplo, si estas peleando cada golpe que da el jugador tiene q ser una decision no hagas una pelea en el que el jugador
+ataca varias veces antes de tener que hacer una eleccion A/B/C y asi con todo, cada decision o accion que realice el personaje 
+tiene que ser decidida por el jugador, a todo esto recuerda que simpre tienen que ser distintas entre ellas las opciones
+A/B/C y que cada una tenga un nivel de dificultad distinto, no repitas niveles de dificultad en las opciones. Tambien tienes que
+ir dandole objetos a los jugadores despues de completar algunas acciones, objetos con habilidades las cuales puedan ustilizar
+por lo tanto en las opciones A/B/C tendras que tener en cuenta que puedan usar esos objetos en las decisiones que tomen,
+tambien pueden subir su vida maxima por encima de 100 con ciertos objetos o acciones, asi que cuando ganen pon la vida del jugador
+al maximo que la haya tenido a lo largo de la partida, por ejemplo si un jugador ha llegado a tener 150 de vida y acaba la partida
+con una victoria y su vida es de 80 pues se la subes a 150, asi con lo maximo que haya sido para cada jugador.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
