@@ -692,58 +692,71 @@ function extractBetweenBraces(text: string): string | null {
     return text.slice(start, end + 1);
 }
 
-//llamada item-shop
+function seededRandom(seedStr: string) {
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+        hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
+        hash |= 0;
+    }
+    return function () {
+        hash = Math.imul(48271, hash) | 0;
+        return ((hash >>> 0) / 2147483647) % 1;
+    };
+}
+
 app.get('/item-shop', async (req, res) => {
     try {
+        const seed = 'shop-' + (new Date()).toISOString().slice(0, 10);
+        const randGen = seededRandom(seed);
+
         const comunes = (await db.query(`SELECT * FROM item WHERE rareza = 'común'`)).rows;
         const pocoComunes = (await db.query(`SELECT * FROM item WHERE rareza = 'poco común'`)).rows;
-        const raros = (await db.query(`SELECT * FROM item WHERE rareza = 'raro'`)).rows;
 
-        const seleccionComunes = [];
         const excludeIds = new Set();
-        let comunesDisponibles = comunes.slice();
-        for (let i = 0; i < 6 && comunesDisponibles.length > 0; i++) {
-            const idx = Math.floor(Math.random() * comunesDisponibles.length);
-            seleccionComunes.push(comunesDisponibles[idx]);
-            excludeIds.add(comunesDisponibles[idx].id);
-            comunesDisponibles.splice(idx, 1);
+        const items = [];
+        
+        // Seleccionar 6 ítems con probabilidad: 70% común, 30% poco común
+        for (let i = 0; i < 6; i++) {
+            const rand = randGen();
+            let selected = null;
+            
+            // 70% probabilidad de común, 30% de poco común
+            if (rand < 0.7) {
+                // Intentar elegir un común
+                let comunesDisponibles = comunes.filter((item: any) => !excludeIds.has(item.id));
+                if (comunesDisponibles.length > 0) {
+                    const idx = Math.floor(randGen() * comunesDisponibles.length);
+                    selected = comunesDisponibles[idx];
+                } else {
+                    // Si no hay comunes, elegir poco común
+                    let pocoComunesDisponibles = pocoComunes.filter((item: any) => !excludeIds.has(item.id));
+                    if (pocoComunesDisponibles.length > 0) {
+                        const idx = Math.floor(randGen() * pocoComunesDisponibles.length);
+                        selected = pocoComunesDisponibles[idx];
+                    }
+                }
+            } else {
+                // Intentar elegir un poco común
+                let pocoComunesDisponibles = pocoComunes.filter((item: any) => !excludeIds.has(item.id));
+                if (pocoComunesDisponibles.length > 0) {
+                    const idx = Math.floor(randGen() * pocoComunesDisponibles.length);
+                    selected = pocoComunesDisponibles[idx];
+                } else {
+                    // Si no hay poco comunes, elegir común
+                    let comunesDisponibles = comunes.filter((item: any) => !excludeIds.has(item.id));
+                    if (comunesDisponibles.length > 0) {
+                        const idx = Math.floor(randGen() * comunesDisponibles.length);
+                        selected = comunesDisponibles[idx];
+                    }
+                }
+            }
+            
+            if (selected) {
+                items.push(selected);
+                excludeIds.add(selected.id);
+            }
         }
 
-        let pocoComunesDisponibles = pocoComunes.filter((item: any) => !excludeIds.has(item.id));
-        let seleccionPocoComunes = [];
-        if (pocoComunesDisponibles.length > 0) {
-            const idx = Math.floor(Math.random() * pocoComunesDisponibles.length);
-            seleccionPocoComunes.push(pocoComunesDisponibles[idx]);
-            excludeIds.add(pocoComunesDisponibles[idx].id);
-        }
-
-        //común 60%, poco común 30%, raro 10%
-        const rand = Math.random();
-        let extra = [];
-        if (rand < 0.6) {
-            let comunesRestantes = comunes.filter((item: any) => !excludeIds.has(item.id));
-            if (comunesRestantes.length > 0) {
-                const idx = Math.floor(Math.random() * comunesRestantes.length);
-                extra.push(comunesRestantes[idx]);
-                excludeIds.add(comunesRestantes[idx].id);
-            }
-        } else if (rand < 0.9) {
-            let pocoComunesRestantes = pocoComunes.filter((item: any) => !excludeIds.has(item.id));
-            if (pocoComunesRestantes.length > 0) {
-                const idx = Math.floor(Math.random() * pocoComunesRestantes.length);
-                extra.push(pocoComunesRestantes[idx]);
-                excludeIds.add(pocoComunesRestantes[idx].id);
-            }
-        } else {
-            let rarosRestantes = raros.filter((item: any) => !excludeIds.has(item.id));
-            if (rarosRestantes.length > 0) {
-                const idx = Math.floor(Math.random() * rarosRestantes.length);
-                extra.push(rarosRestantes[idx]);
-                excludeIds.add(rarosRestantes[idx].id);
-            }
-        }
-
-        const items = [...seleccionComunes, ...seleccionPocoComunes, ...extra];
         res.json({ items });
     } catch (e) {
         console.error(e);
@@ -751,6 +764,32 @@ app.get('/item-shop', async (req, res) => {
     }
 });
 
+app.get('/users/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const result = await db.query(
+            'SELECT * FROM "user" WHERE id = $1',
+            [userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        await updateUserXP(userId);
+
+        const updated = await db.query(
+            'SELECT * FROM "user" WHERE id = $1',
+            [userId]
+        );
+
+        res.json({ user: updated.rows[0] });
+    } catch (e) {
+        console.error(e);
+        res.status(500).send('Error obteniendo usuario');
+    }
+});
 
 const port = 3000;
 
