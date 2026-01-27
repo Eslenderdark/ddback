@@ -123,7 +123,7 @@ en las opciones A/B/C poner una opcion despues de derrotar al jefe de continuar 
 tambien pueda decidir si quiere seguir con la aventura o no. Recuerda que la narrativa tiene que ser coherente con las estadísticas del personaje
 y sus estados, si el personaje tiene un estado de congelación no puedes narrar que corre rápido por ejemplo, adapta la narrativa
 a las estadísticas y estados del personaje. Y tambien el objetivo principal uede ser otro q no sea matar a un jefe. Cada vez que salga
-un enemigo marcame cuanta vida tiene con el siguiente formato: NOMBRE ENEMIGO: {{VIDA ENEMIGO}}.
+un enemigo marcame cuanta vida tiene con el siguiente formato: NOMBRE ENEMIGO: VIDA ENEMIGO.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
@@ -299,6 +299,7 @@ NO añadas explicaciones.
 NO envíes texto fuera del JSON.
 NO encierres el JSON en comillas ni en bloques de código
 NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con el JSON.
+NO des nunca ningun valor en negativo para ninguna estadistica y asegurate de que el hp se puede leer bien.
 QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CON LOS VALORES ACTUALES DE LAS ESTADÍSTICAS.
 
 `;
@@ -318,6 +319,24 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         } catch (e) {
             console.error('JSON inválido:', cleanStatsResult);
             return res.status(500).json({ error: 'Invalid stats JSON from Gemini' });
+        }
+        console.log('Estadísticas extraídas del JSON:', stats);
+        if (stats.hp === undefined || stats.hp === null) {
+            console.log('Estadística de vida (hp) no encontrada en el JSON, reintentando...');
+            const result = await chat.sendMessage(userpromt); // Se lo enviamos
+            const response = await result.response;
+
+            const statsResult = await chat.sendMessage(statsPrompt);
+            const cleanStatsResult = extractBetweenBraces(statsResult.response.text());
+
+            let stats;
+            try {
+                stats = cleanStatsResult ? JSON.parse(cleanStatsResult) : null;
+            } catch (e) {
+                console.error('JSON inválido:', cleanStatsResult);
+                return res.status(500).json({ error: 'Invalid stats JSON from Gemini' });
+            }
+            console.log('Estadísticas extraídas del JSON en el reintento:', stats);
         }
 
         if (stats.hp < 0) {
@@ -714,12 +733,12 @@ app.get('/item-shop', async (req, res) => {
 
         const excludeIds = new Set();
         const items = [];
-        
+
         // Seleccionar 6 ítems con probabilidad: 70% común, 30% poco común
         for (let i = 0; i < 6; i++) {
             const rand = randGen();
             let selected = null;
-            
+
             // 70% probabilidad de común, 30% de poco común
             if (rand < 0.7) {
                 // Intentar elegir un común
@@ -750,7 +769,7 @@ app.get('/item-shop', async (req, res) => {
                     }
                 }
             }
-            
+
             if (selected) {
                 items.push(selected);
                 excludeIds.add(selected.id);
