@@ -123,7 +123,7 @@ en las opciones A/B/C poner una opcion despues de derrotar al jefe de continuar 
 tambien pueda decidir si quiere seguir con la aventura o no. Recuerda que la narrativa tiene que ser coherente con las estadísticas del personaje
 y sus estados, si el personaje tiene un estado de congelación no puedes narrar que corre rápido por ejemplo, adapta la narrativa
 a las estadísticas y estados del personaje. Y tambien el objetivo principal uede ser otro q no sea matar a un jefe. Cada vez que salga
-un enemigo marcame cuanta vida tiene con el siguiente formato: {{NOMBRE ENEMIGO}}: {{VIDA ENEMIGO}}.
+un enemigo marcame cuanta vida tiene con el siguiente formato: NOMBRE ENEMIGO: {{VIDA ENEMIGO}}.
 El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
