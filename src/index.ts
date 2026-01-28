@@ -830,6 +830,88 @@ app.get('/item-shop', async (req, res) => {
     }
 });
 
+app.post('/item-shop', async (req, res) => {
+    try {
+        const { userId, itemId } = req.body;
+
+        if (!userId || !itemId) {
+            return res.status(400).json({ message: 'userId y itemId son requeridos' });
+        }
+        // Verificar que el usuario existe y obtener sus monedas
+        const userResult = await db.query(
+            'SELECT coins FROM "user" WHERE id = $1',
+            [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const userCoins = userResult.rows[0].coins;
+
+        // Verificar que el ítem existe y obtener su precio
+        const itemResult = await db.query(
+            'SELECT price FROM item WHERE id = $1',
+            [itemId]
+        );
+
+        if (itemResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Item no encontrado' });
+        }
+
+        const itemPrice = itemResult.rows[0].price;
+
+        // Verificar que el usuario tiene suficientes monedas
+        if (userCoins < itemPrice) {
+            return res.status(400).json({ message: 'No tienes suficientes monedas' });
+        }
+
+        // Obtener el inventario del usuario
+        const inventoryResult = await db.query(
+            'SELECT * FROM inventory WHERE user_id = $1',
+            [userId]
+        );
+
+        if (inventoryResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Inventario no encontrado' });
+        }
+        
+        const inventory = inventoryResult.rows[0];
+
+        let slotColumn = null;
+        for (let i = 1; i <= 10; i++) {
+            const columnName = `item_${i}_id`;
+            if (!inventory[columnName]) {
+                slotColumn = columnName;
+                break;
+            }
+        }
+
+        if (!slotColumn) {
+            return res.status(400).json({ message: 'Inventario lleno' });
+        }
+
+        await db.query(
+            'UPDATE "user" SET coins = coins - $1 WHERE id = $2',
+            [itemPrice, userId]
+        );
+
+        await db.query(
+            `UPDATE inventory SET ${slotColumn} = $1 WHERE user_id = $2`,
+            [itemId, userId]
+        );
+
+        res.json({
+            message: 'Compra exitosa',
+            coinsRemaining: userCoins - itemPrice
+        });
+
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Error al procesar la compra' });
+    }
+});
+
 app.get('/users/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -856,6 +938,8 @@ app.get('/users/:userId', async (req, res) => {
         res.status(500).send('Error obteniendo usuario');
     }
 });
+
+
 
 const port = 3000;
 
