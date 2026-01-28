@@ -123,8 +123,14 @@ en las opciones A/B/C poner una opcion despues de derrotar al jefe de continuar 
 tambien pueda decidir si quiere seguir con la aventura o no. Recuerda que la narrativa tiene que ser coherente con las estadísticas del personaje
 y sus estados, si el personaje tiene un estado de congelación no puedes narrar que corre rápido por ejemplo, adapta la narrativa
 a las estadísticas y estados del personaje. Y tambien el objetivo principal uede ser otro q no sea matar a un jefe. Cada vez que salga
-un enemigo marcame cuanta vida tiene con el siguiente formato: NOMBRE ENEMIGO: VIDA ENEMIGO.
-El array del personaje es este {{CHARACTER_ARRAY}}` // Prompt inicial
+un enemigo marcame cuanta vida tiene con el siguiente formato: NOMBRE ENEMIGO: VIDA ENEMIGO. Los items te los enviare al final del 
+mensaje despues de la array del personaje, es posible que el personaje no tenga items iniciales. Con esta array despues yo te pedire 
+que, basandote en ella, me crees items y que los elimines dependiendo del transcurso de la narrativa. Ahora tambien siempre que se cumpla
+una accion buena que realize el personaje puede recibir monedas de oro, cuando consiga las monedas lo mostraras asi: MONEDAS: +3 (por ejemplo),
+y cuando consiga un objeto lo mostraras asi: ITEM CONSEGUIDO: NOMBRE DEL ITEM: DESCRIPCION DEL ITEM (PRECIO DEL ITEM). Tienes que ponerle a los items
+un precio basado en lo buenos que son y las acciones que realizan.
+El array del personaje es este {{CHARACTER_ARRAY}}
+El array de los items que tiene el personaje {{ITEMS_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
@@ -199,11 +205,19 @@ app.get('/gemini/:charId', async (req, res) => {
             xp: char.xp || 0
         }];
 
-        // 3. Preparar prompt con el personaje concreto
+        const objects = await db.query(
+            `SELECT * FROM item
+         WHERE character_id = $1`,
+            [charId]
+        );
+
+        console.log('Items del personaje cargados:', objects.rows);
+
+        // 3. Preparar prompt con el personaje concreto y los items
         const promptFinal = promtNarrativa.replace(
             '{{CHARACTER_ARRAY}}',
-            JSON.stringify(characterArray)
-        );
+            JSON.stringify(characterArray),
+        ).replace('{{ITEMS_ARRAY}}', JSON.stringify(objects.rows));
 
         // 4. Generar narrativa inicial
         const geminiResult = await chat.sendMessage(promptFinal);
@@ -304,15 +318,35 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
 `;
 
-
+        const itemsPrompt = `
+        Devuélveme OBLIGATORIAMENTE un JSON VÁLIDO, sin ningún texto adicional antes o después,
+        con el item conseguido tras la última acción realizada.
+        El formato debe ser EXACTAMENTE este:
+        {
+            "name": string,
+            "description": string,
+            "price": number
+        }
+        NO INCLUYAS NINGÚN TIPO DE TEXTO ADICIONAL DE JSON O DE COMILLAS
+        NO envíes texto fuera del JSON.
+        NO encierres el JSON en comillas ni en bloques de código
+        NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con el JSON.
+        QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CON LOS VALORES DEL ITEM CONSEGUIDO.
+        SI NO hA CONSEGUIDO NINGUN ITEM RESPONDE CON "NO"
+        `;
 
         console.log('Respuesta efectuada cargando promt...')
         const result = await chat.sendMessage(userpromt); // Se lo enviamos
         const response = await result.response;
 
+
         const statsResult = await chat.sendMessage(statsPrompt);
         const cleanStatsResult = extractBetweenBraces(statsResult.response.text());
 
+        const itemsResult = await chat.sendMessage(itemsPrompt);
+        const cleanItemsResult = extractBetweenBraces(itemsResult.response.text());
+
+        
         let stats;
         try {
             stats = cleanStatsResult ? JSON.parse(cleanStatsResult) : null;
@@ -339,6 +373,40 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             console.log('Estadísticas extraídas del JSON en el reintento:', stats);
         }
 
+        //Item manipulatiooooooon
+        let itemGame
+        let itemBd
+
+        if (cleanItemsResult === "NO" || cleanItemsResult === "no" || cleanItemsResult === "No") {
+            console.log('No hay item en este turno')
+        } else {
+            try {
+                itemGame = cleanItemsResult ? JSON.parse(cleanItemsResult) : null;
+            } catch (e) {
+                console.error('JSON inválido:', cleanItemsResult);
+                return res.status(500).json({ error: 'Invalid items JSON from Gemini' });
+            }
+
+            itemBd = {
+                name: String(itemGame.name),
+                description: String(itemGame.description),
+                rareza: 'Unico',
+                price: itemGame.price,
+                character_id: idchar
+            }
+
+            const insertItem = await db.query(
+                `INSERT INTO item
+            (name, description, rareza, price,character_id)
+            VALUES
+            ($1, $2, $3, $4, $5)`,
+                [itemBd.name, itemBd.description, itemBd.rareza, itemBd.price, itemBd.character_id]
+            )
+
+            console.log('Item añadido en la base de datos:', insertItem);
+        }
+        //Fin de la item manipulasionnn
+
         if (stats.hp < 0) {
             stats.hp = 0;
         }   // Aseguramos que la vida no sea negativa
@@ -359,6 +427,8 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
             response: response.text()
         };
+
+
 
         character[0].hp = Number(gameResponse.hp)
         character[0].strength = Number(gameResponse.strength)
@@ -397,12 +467,6 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
      xp = $8
    WHERE id = $9 RETURNING user_id`,
             [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, idchar]);
-
-        // Actualizar el XP del usuario sumando el XP de todos sus personajes
-        if (resultchar.rows.length > 0) {
-            const userId = resultchar.rows[0].user_id;
-            await updateUserXP(userId);
-        }
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
 
