@@ -128,7 +128,10 @@ mensaje despues de la array del personaje, es posible que el personaje no tenga 
 que, basandote en ella, me crees items y que los elimines dependiendo del transcurso de la narrativa. Ahora tambien siempre que se cumpla
 una accion buena que realize el personaje puede recibir monedas de oro, cuando consiga las monedas lo mostraras asi: MONEDAS: +3 (por ejemplo),
 y cuando consiga un objeto lo mostraras asi: ITEM CONSEGUIDO: NOMBRE DEL ITEM: DESCRIPCION DEL ITEM (PRECIO DEL ITEM). Tienes que ponerle a los items
-un precio basado en lo buenos que son y las acciones que realizan.
+un precio basado en lo buenos que son y las acciones que realizan. El jugador solo puede obtener un item por accion. Si en la narrativa
+se gasta un item del jugador que ya tuviera o que haya conseguido en la aventura ese item se borra, y lo tienes que mostrar asi: 
+ITEM ELIMINADO : NOMBRE DEL ITEM, luego te preguntare cada turno si has eliminado algun item si es asi respondes como se te indicara con un 
+JSON con el nombre y el id del character.
 El array del personaje es este {{CHARACTER_ARRAY}}
 El array de los items que tiene el personaje {{ITEMS_ARRAY}}` // Prompt inicial
 
@@ -332,7 +335,22 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         NO encierres el JSON en comillas ni en bloques de código
         NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con el JSON.
         QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CON LOS VALORES DEL ITEM CONSEGUIDO.
-        SI NO hA CONSEGUIDO NINGUN ITEM RESPONDE CON "NO"
+        SI NO HA CONSEGUIDO NINGUN ITEM RESPONDE CON "NO"
+        `;
+
+        const itemsDestroyPrompt = `
+        Devuélveme OBLIGATORIAMENTE un JSON VÁLIDO, sin ningún texto adicional antes o después,
+        con el item conseguido eliminado tras la última acción realizada. Si no se ha eliminado ningun item da una respuesta de NO
+        El formato debe ser EXACTAMENTE este:
+        {
+            "name": string
+        }
+        NO INCLUYAS NINGÚN TIPO DE TEXTO ADICIONAL DE JSON O DE COMILLAS
+        NO envíes texto fuera del JSON.
+        NO encierres el JSON en comillas ni en bloques de código
+        NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con el JSON.
+        QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE
+        SI NO SE HA ELIMINADO NINGUN ITEM RESPONDE CON "NO" 
         `;
 
         console.log('Respuesta efectuada cargando promt...')
@@ -345,6 +363,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
         const itemsResult = await chat.sendMessage(itemsPrompt);
         const cleanItemsResult = extractBetweenBraces(itemsResult.response.text());
+
+        const itemsDestroyResult = await chat.sendMessage(itemsDestroyPrompt)
+        const cleanItemsDestroyResult = extractBetweenBraces(itemsDestroyResult.response.text())
 
         
         let stats;
@@ -377,11 +398,15 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         let itemGame
         let itemBd
 
-        if (cleanItemsResult === "NO" || cleanItemsResult === "no" || cleanItemsResult === "No") {
+        console.log('Clean Item Result:', cleanItemsResult)
+
+        if (cleanItemsResult === "NO" || cleanItemsResult === "no" || cleanItemsResult === "No" || cleanItemsResult === null) {
             console.log('No hay item en este turno')
         } else {
+            console.log('Si que hay Item')
             try {
                 itemGame = cleanItemsResult ? JSON.parse(cleanItemsResult) : null;
+                console.log('ItemGame:', itemGame)
             } catch (e) {
                 console.error('JSON inválido:', cleanItemsResult);
                 return res.status(500).json({ error: 'Invalid items JSON from Gemini' });
@@ -404,6 +429,26 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             )
 
             console.log('Item añadido en la base de datos:', insertItem);
+        }
+        let itemRemove
+        if (cleanItemsDestroyResult === "NO" || cleanItemsDestroyResult === "no" || cleanItemsDestroyResult === "No" || cleanItemsDestroyResult === null){
+            console.log('No hay items para borrar', cleanItemsDestroyResult)
+        }else{    
+            console.log("Si hay items para borrar", cleanItemsDestroyResult)
+            try {
+                itemRemove = cleanItemsDestroyResult ? JSON.parse(cleanItemsDestroyResult) : null;
+                console.log('ItemRemove:', itemRemove)
+            } catch (e) {
+                console.error('JSON inválido:', cleanItemsDestroyResult);
+                return res.status(500).json({ error: 'Invalid items JSON from Gemini' });
+            }
+
+            const deletItem = await db.query(
+                `DELETE FROM item
+                WHERE name = $1 AND character_id = $2
+                `,
+                [itemRemove.name, idchar]
+            )
         }
         //Fin de la item manipulasionnn
 
