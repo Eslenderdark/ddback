@@ -877,12 +877,12 @@ app.get('/item-shop', async (req, res) => {
 
 app.post('/item-shop', async (req, res) => {
     try {
-        const { userId, itemId } = req.body;
+        const { userId, itemId, characterId } = req.body;
 
-        if (!userId || !itemId) {
-            return res.status(400).json({ message: 'userId y itemId son requeridos' });
+        if (!userId || !itemId || !characterId) {
+            return res.status(400).json({ message: 'userId, itemId y characterId son requeridos' });
         }
-        // Verificar que el usuario existe y obtener sus monedas
+        // usuario existe y monedas
         const userResult = await db.query(
             'SELECT coins FROM "user" WHERE id = $1',
             [userId]
@@ -893,62 +893,45 @@ app.post('/item-shop', async (req, res) => {
         }
 
         const userCoins = userResult.rows[0].coins;
-
-        // Verificar que el ítem existe y obtener su precio
+        // personaje existe y es de el usuario
+        const characterResult = await db.query(
+            'SELECT * FROM character WHERE id = $1 AND user_id = $2',
+            [characterId, userId]
+        );
+        if (characterResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Personaje no encontrado o no te pertenece' });
+        }
+        // item existe y obtiene datos
         const itemResult = await db.query(
-            'SELECT price FROM item WHERE id = $1',
+            'SELECT * FROM item WHERE id = $1 AND character_id IS NULL',
             [itemId]
         );
-
         if (itemResult.rows.length === 0) {
             return res.status(404).json({ message: 'Item no encontrado' });
         }
-
-        const itemPrice = itemResult.rows[0].price;
-
-        // Verificar que el usuario tiene suficientes monedas
+        const itemTemplate = itemResult.rows[0];
+        const itemPrice = itemTemplate.price;
+        // el usuario tiene suficientes monedas para obtener el item
         if (userCoins < itemPrice) {
             return res.status(400).json({ message: 'No tienes suficientes monedas' });
         }
-
-        // Obtener el inventario del usuario
-        const inventoryResult = await db.query(
-            'SELECT * FROM inventory WHERE user_id = $1',
-            [userId]
-        );
-
-        if (inventoryResult.rows.length === 0) {
-            return res.status(404).json({ message: 'Inventario no encontrado' });
-        }
-        
-        const inventory = inventoryResult.rows[0];
-
-        let slotColumn = null;
-        for (let i = 1; i <= 10; i++) {
-            const columnName = `item_${i}_id`;
-            if (!inventory[columnName]) {
-                slotColumn = columnName;
-                break;
-            }
-        }
-
-        if (!slotColumn) {
-            return res.status(400).json({ message: 'Inventario lleno' });
-        }
-
+        // quitar monedas al usuario
         await db.query(
             'UPDATE "user" SET coins = coins - $1 WHERE id = $2',
             [itemPrice, userId]
         );
-
-        await db.query(
-            `UPDATE inventory SET ${slotColumn} = $1 WHERE user_id = $2`,
-            [itemId, userId]
+        // Duplicar el ítem añadiendo el character_id del personaje
+        const newItemResult = await db.query(
+            `INSERT INTO item (name, description, rareza, price, character_id)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING *`,
+            [itemTemplate.name, itemTemplate.description, itemTemplate.rareza, itemTemplate.price, characterId]
         );
 
         res.json({
             message: 'Compra exitosa',
-            coinsRemaining: userCoins - itemPrice
+            coinsRemaining: userCoins - itemPrice,
+            item: newItemResult.rows[0]
         });
 
     } catch (e) {
