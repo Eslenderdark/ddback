@@ -968,8 +968,8 @@ app.get('/users/:userId', async (req, res) => {
 });
 
 app.get('/getcharactersbyemail/:email', async (req, res) => {
-  //const { email } = req.params;
-  const email = "bryanchuquimarcacastillo@gmail.com"
+  const { email } = req.params;
+ 
   console.log('EMAIL RECIBIDO:', email);
 
   try {
