@@ -967,6 +967,47 @@ app.get('/users/:userId', async (req, res) => {
     }
 });
 
+app.get('/getcharactersbyemail/:email', async (req, res) => {
+  //const { email } = req.params;
+  const email = "bryanchuquimarcacastillo@gmail.com"
+  console.log('EMAIL RECIBIDO:', email);
+
+  try {
+    
+    const charactersResult = await db.query(
+      'SELECT * FROM character WHERE user_id = $1',
+      [email]
+    );
+
+    const characterIds = charactersResult.rows.map((c:any) => c.id);
+
+   
+    if (characterIds.length === 0) {
+      return res.json({
+        characters: [],
+        items: []
+      });
+    }
+
+console.log(characterIds)    
+    const itemsResult = await db.query(
+      'SELECT * FROM item WHERE character_id = ANY($1)',
+      [characterIds]
+    );
+
+  
+    res.json({
+      characters: charactersResult.rows,
+      items: itemsResult.rows
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error getting characters/items' });
+  }
+});
+
+
 
 
 const port = 3000;
