@@ -822,8 +822,8 @@ function extractBetweenBraces(text: string): string | null {
 
 app.get('/item-shop', async (req, res) => {
     try {
-        const comunes = (await db.query(`SELECT * FROM item WHERE rareza = 'común'`)).rows;
-        const pocoComunes = (await db.query(`SELECT * FROM item WHERE rareza = 'poco común'`)).rows;
+        const comunes = (await db.query(`SELECT * FROM item WHERE rareza = 'común' AND character_id IS NULL`)).rows;
+        const pocoComunes = (await db.query(`SELECT * FROM item WHERE rareza = 'poco común' AND character_id IS NULL`)).rows;
 
         const excludeIds = new Set();
         const items = [];
@@ -834,7 +834,6 @@ app.get('/item-shop', async (req, res) => {
 
             // 70% probabilidad de común, 30% de poco común
             if (Math.random() < 0.7) {
-                // Intentar elegir un común
                 let comunesDisponibles = comunes.filter((item: any) => !excludeIds.has(item.id));
                 if (comunesDisponibles.length > 0) {
                     const idx = Math.floor(Math.random() * comunesDisponibles.length);
