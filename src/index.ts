@@ -210,7 +210,7 @@ app.get('/gemini/:charId', async (req, res) => {
 
         const objects = await db.query(
             `SELECT * FROM item
-         WHERE character_id = $1`,
+         WHERE character_id = $1 AND on_market = false`,
             [charId]
         );
 
@@ -367,7 +367,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         const itemsDestroyResult = await chat.sendMessage(itemsDestroyPrompt)
         const cleanItemsDestroyResult = extractBetweenBraces(itemsDestroyResult.response.text())
 
-        
+
         let stats;
         try {
             stats = cleanStatsResult ? JSON.parse(cleanStatsResult) : null;
@@ -431,9 +431,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             console.log('Item añadido en la base de datos:', insertItem);
         }
         let itemRemove
-        if (cleanItemsDestroyResult === "NO" || cleanItemsDestroyResult === "no" || cleanItemsDestroyResult === "No" || cleanItemsDestroyResult === null){
+        if (cleanItemsDestroyResult === "NO" || cleanItemsDestroyResult === "no" || cleanItemsDestroyResult === "No" || cleanItemsDestroyResult === null) {
             console.log('No hay items para borrar', cleanItemsDestroyResult)
-        }else{    
+        } else {
             console.log("Si hay items para borrar", cleanItemsDestroyResult)
             try {
                 itemRemove = cleanItemsDestroyResult ? JSON.parse(cleanItemsDestroyResult) : null;
@@ -967,46 +967,69 @@ app.get('/users/:userId', async (req, res) => {
 });
 
 app.get('/getcharactersbyemail/:email', async (req, res) => {
-  const { email } = req.params;
- 
-  console.log('EMAIL RECIBIDO:', email);
+    const { email } = req.params;
 
-  try {
-    
-    const charactersResult = await db.query(
-      'SELECT * FROM character WHERE user_id = $1',
-      [email]
-    );
+    console.log('EMAIL RECIBIDO:', email);
 
-    const characterIds = charactersResult.rows.map((c:any) => c.id);
+    try {
 
-   
-    if (characterIds.length === 0) {
-      return res.json({
-        characters: [],
-        items: []
-      });
+        const charactersResult = await db.query(
+            'SELECT * FROM character WHERE user_id = $1',
+            [email]
+        );
+
+        const characterIds = charactersResult.rows.map((c: any) => c.id);
+
+
+        if (characterIds.length === 0) {
+            return res.json({
+                characters: [],
+                items: []
+            });
+        }
+
+        console.log(characterIds)
+        const itemsResult = await db.query(
+            'SELECT * FROM item WHERE character_id = ANY($1)',
+            [characterIds]
+        );
+
+
+        res.json({
+            characters: charactersResult.rows,
+            items: itemsResult.rows
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error getting characters/items' });
     }
-
-console.log(characterIds)    
-    const itemsResult = await db.query(
-      'SELECT * FROM item WHERE character_id = ANY($1)',
-      [characterIds]
-    );
-
-  
-    res.json({
-      characters: charactersResult.rows,
-      items: itemsResult.rows
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error getting characters/items' });
-  }
 });
 
+app.get('/market/items', async (req, res) => {
+    try {
+        // Selecciona los ítems en venta y une con el usuario vendedor
+        const result = await db.query(`
+            SELECT 
+                item.id,
+                item.name,
+                item.description,
+                item.rareza,
+                item.price,
+                item.market_price,
+                item.seller_id,
+                u.name AS seller_name
+            FROM item
+            LEFT JOIN "user" u ON item.seller_id = u.id
+            WHERE item.on_market = true
+        `);
 
+        res.json({ items: result.rows });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Error al obtener items del market' });
+    }
+});
 
 
 const port = 3000;
