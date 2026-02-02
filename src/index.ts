@@ -12,7 +12,7 @@ app.use(express.json());
 import bodyParser from 'body-parser';
 const jsonParser = bodyParser.json();
 let idchar = 0;
-let user = 0;
+let user = "";
 const character = [
     {
         id: 0,
