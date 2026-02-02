@@ -142,6 +142,8 @@ dar 1 moneda por cada 5 de experiencia, esto es porque las monedas son muy valio
 a la hora de dar monedas para no pasarte, igual que la experiencia las monedas aumentan en cantidad dependiendo de la ronda en la que estes
 y la dificultad de cada accion. El escalado de las monedas y la xp debe de ser lento para mantener un buen balance en el juego y recompensar 
 las acciones realizadas solo en rondas uy altas.
+Responde siempre en español y solo con la narrativa y lo que se indica en el prompt, estas en un juego solo texto que se tenga que ver
+en el juego.
 El array del personaje es este {{CHARACTER_ARRAY}}
 El array de los items que tiene el personaje {{ITEMS_ARRAY}}` // Prompt inicial
 
