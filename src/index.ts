@@ -1053,6 +1053,41 @@ app.get('/market/items', async (req, res) => {
     }
 });
 
+app.get('/sellitem/:itemId', async (req, res) => {
+    try {
+    const { itemId } = req.params
+    console.log('Item id' + itemId)
+    const item = await db.query(`
+        SELECT price, character_id FROM item WHERE id= $1
+        `, [itemId]) 
+    
+    console.log(item.rows)
+
+    const rows = item.rows ?? item[0];
+    const price = rows[0].price;
+    const character = rows[0].character_id;
+   
+    const user = await db.query('SELECT user_id from character WHERE id = $1', [character])
+    const rows2 = user.rows ?? user[0];
+    const id = rows2[0].user_id;    
+
+    const sell = await db.query(
+  'UPDATE "user" SET coins = coins + $1 WHERE id = $2',
+  [price, id]
+);
+
+    console.log('Item sold' + price + " USER "+ id)
+
+    const result = await db.query(`
+        DELETE FROM item WHERE id= $1
+        `, [itemId])
+    res.json({ result });
+    }
+    catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Error al vender item' });
+    }
+})
 
 const port = 3000;
 
