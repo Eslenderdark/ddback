@@ -218,7 +218,7 @@ app.get('/gemini/:charId', async (req, res) => {
         }];
 
         user = char.user_id
-        
+
         const objects = await db.query(
             `SELECT * FROM item
          WHERE character_id = $1 AND on_market = false`,
@@ -379,7 +379,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         const itemsDestroyResult = await chat.sendMessage(itemsDestroyPrompt)
         const cleanItemsDestroyResult = extractBetweenBraces(itemsDestroyResult.response.text())
 
-        
+
         let stats;
         try {
             stats = cleanStatsResult ? JSON.parse(cleanStatsResult) : null;
@@ -445,7 +445,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         let itemRemove
         if (cleanItemsDestroyResult === "NO" || cleanItemsDestroyResult === "no" || cleanItemsDestroyResult === "No" || cleanItemsDestroyResult === null) {
             console.log('No hay items para borrar', cleanItemsDestroyResult)
-        } else {     
+        } else {
             console.log("Si hay items para borrar", cleanItemsDestroyResult)
             try {
                 itemRemove = cleanItemsDestroyResult ? JSON.parse(cleanItemsDestroyResult) : null;
@@ -513,9 +513,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
                 `UPDATE "user"
                 SET 
                 coins = $1 WHERE id = $2`,
-                [coins,user]
+                [coins, user]
             )
-            
+
             console.log('VICTORIA')
         }
 
@@ -535,7 +535,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, idchar]);
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
-        console.log('USUARIO AÑADIR MONEDAS'+ user)
+        console.log('USUARIO AÑADIR MONEDAS' + user)
         console.log('COINS' + coins)
         console.log(`
 
@@ -1055,39 +1055,104 @@ app.get('/market/items', async (req, res) => {
 
 app.get('/sellitem/:itemId', async (req, res) => {
     try {
-    const { itemId } = req.params
-    console.log('Item id' + itemId)
-    const item = await db.query(`
+        const { itemId } = req.params
+        console.log('Item id' + itemId)
+        const item = await db.query(`
         SELECT price, character_id FROM item WHERE id= $1
-        `, [itemId]) 
-    
-    console.log(item.rows)
+        `, [itemId])
 
-    const rows = item.rows ?? item[0];
-    const price = rows[0].price;
-    const character = rows[0].character_id;
-   
-    const user = await db.query('SELECT user_id from character WHERE id = $1', [character])
-    const rows2 = user.rows ?? user[0];
-    const id = rows2[0].user_id;    
+        console.log(item.rows)
 
-    const sell = await db.query(
-  'UPDATE "user" SET coins = coins + $1 WHERE id = $2',
-  [price, id]
-);
+        const rows = item.rows ?? item[0];
+        const price = rows[0].price;
+        const character = rows[0].character_id;
 
-    console.log('Item sold' + price + " USER "+ id)
+        const user = await db.query('SELECT user_id from character WHERE id = $1', [character])
+        const rows2 = user.rows ?? user[0];
+        const id = rows2[0].user_id;
 
-    const result = await db.query(`
+        const sell = await db.query(
+            'UPDATE "user" SET coins = coins + $1 WHERE id = $2',
+            [price, id]
+        );
+
+        console.log('Item sold' + price + " USER " + id)
+
+        const result = await db.query(`
         DELETE FROM item WHERE id= $1
         `, [itemId])
-    res.json({ result });
+        res.json({ result });
     }
     catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Error al vender item' });
     }
 })
+
+//funcion compra de item en market
+app.post('/market/buyitem', async (req, res) => {
+    try {
+        const { itemId, buyerId, characterId } = req.body;
+        // Obtener el ítem
+        const itemResult = await db.query(
+            'SELECT * FROM item WHERE id = $1 AND on_market = true',
+            [itemId]
+        );
+
+        if (itemResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Item no encontrado en el market' });
+        }
+        const item = itemResult.rows[0];
+        const itemPrice = item.market_price;
+
+        // Verificar que el comprador tiene suficientes monedas
+        const buyerResult = await db.query(
+            'SELECT coins FROM "user" WHERE id = $1',
+            [buyerId]
+        );
+
+        if (buyerResult.rows.length === 0) {
+            console.log('Buyer ID not found:', buyerId);
+            return res.status(404).json({ message: 'Comprador no encontrado', });
+
+        }
+
+        const characterResult = await db.query(
+            'SELECT * FROM character WHERE id = $1',
+            [characterId]
+        );
+        if (characterResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Character no encontrado' });
+        }
+
+        const buyerCoins = buyerResult.rows[0].coins;
+        if (buyerCoins < itemPrice) {
+            return res.status(400).json({ message: 'No tienes suficientes monedas' });
+        }
+
+        // Restar monedas al comprador
+        await db.query(
+            'UPDATE "user" SET coins = coins - $1 WHERE id = $2',
+            [itemPrice, buyerId]
+        );
+        // Añadir monedas al vendedor
+        await db.query(
+            'UPDATE "user" SET coins = coins + $1 WHERE id = $2',
+            [itemPrice, item.seller_id]
+        );
+
+        await db.query(
+            'UPDATE item SET character_id = $2, on_market = false, market_price = NULL, seller_id = NULL WHERE id = $1',
+            [itemId, characterId]
+        );
+        res.json({ message: 'Compra exitosa' });
+
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Error al procesar la compra' });
+    }
+});
+
 
 const port = 3000;
 
