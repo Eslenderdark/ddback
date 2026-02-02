@@ -12,6 +12,7 @@ app.use(express.json());
 import bodyParser from 'body-parser';
 const jsonParser = bodyParser.json();
 let idchar = 0;
+let user = 0;
 const character = [
     {
         id: 0,
@@ -131,7 +132,12 @@ y cuando consiga un objeto lo mostraras asi: ITEM CONSEGUIDO: NOMBRE DEL ITEM: D
 un precio basado en lo buenos que son y las acciones que realizan. El jugador solo puede obtener un item por accion. Si en la narrativa
 se gasta un item del jugador que ya tuviera o que haya conseguido en la aventura ese item se borra, y lo tienes que mostrar asi: 
 ITEM ELIMINADO : NOMBRE DEL ITEM, luego te preguntare cada turno si has eliminado algun item si es asi respondes como se te indicara con un 
-JSON con el nombre y el id del character.
+JSON con el nombre y el id del character. Algunos items pueden ser utilizados varias veces sin gastarse, por ejemplo una espada 
+puede utilizarse varias veces sin eliminarse hasta que se rompa o se te pierda por ejemplo, pero una pocion, que solo t l a puedes beber, 
+tiene un solo uso, y despues de su primer uso debe eliminarse, esto significa que habrá items que no tendras que borrar siempre 
+que se utilicen, asi q esos items no los elimines al primer uso ano ser que la narrativa diga lo contrario por algun factor poco comun 
+como podria ser que te lo roben, que se rompa, o que lo pierdas. Las monedas que consigas ves acumulandolas a un total, guarda siempre 
+el total de monedas. 
 El array del personaje es este {{CHARACTER_ARRAY}}
 El array de los items que tiene el personaje {{ITEMS_ARRAY}}` // Prompt inicial
 
@@ -184,7 +190,7 @@ app.get('/gemini/:charId', async (req, res) => {
 
         // 1. Cargar personaje específico
         const result = await db.query(
-            `SELECT id, name, hp, strength, agility, luck, alive, run, state, xp
+            `SELECT id, name, hp, strength, agility, luck, alive, run, state, xp, user_id
        FROM "character" WHERE id = $1`,
             [charId]
         );
@@ -208,6 +214,8 @@ app.get('/gemini/:charId', async (req, res) => {
             xp: char.xp || 0
         }];
 
+        user = char.user_id
+        
         const objects = await db.query(
             `SELECT * FROM item
          WHERE character_id = $1 AND on_market = false`,
@@ -308,7 +316,8 @@ El formato debe ser EXACTAMENTE este:
   "luck": number,
   "alive": boolean,
   "run": boolean,
-  "xp": number
+  "xp": number,
+  "monedas": number
 }
 
 NO INCLUYAS NINGÚN TIPO DE TEXTO ADICIONAL DE JSON O DE COMILLAS
@@ -367,7 +376,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         const itemsDestroyResult = await chat.sendMessage(itemsDestroyPrompt)
         const cleanItemsDestroyResult = extractBetweenBraces(itemsDestroyResult.response.text())
 
-
+        
         let stats;
         try {
             stats = cleanStatsResult ? JSON.parse(cleanStatsResult) : null;
@@ -422,9 +431,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
             const insertItem = await db.query(
                 `INSERT INTO item
-            (name, description, rareza, price,character_id)
+            (name, description, rareza, price,character_id, on_market)
             VALUES
-            ($1, $2, $3, $4, $5)`,
+            ($1, $2, $3, $4, $5, false)`,
                 [itemBd.name, itemBd.description, itemBd.rareza, itemBd.price, itemBd.character_id]
             )
 
@@ -433,7 +442,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         let itemRemove
         if (cleanItemsDestroyResult === "NO" || cleanItemsDestroyResult === "no" || cleanItemsDestroyResult === "No" || cleanItemsDestroyResult === null) {
             console.log('No hay items para borrar', cleanItemsDestroyResult)
-        } else {
+        } else {     
             console.log("Si hay items para borrar", cleanItemsDestroyResult)
             try {
                 itemRemove = cleanItemsDestroyResult ? JSON.parse(cleanItemsDestroyResult) : null;
@@ -473,6 +482,8 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             response: response.text()
         };
 
+        const coins = stats.monedas
+
 
 
         character[0].hp = Number(gameResponse.hp)
@@ -495,6 +506,13 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         //chequeo de victoria y añadir xp extra
         if (character[0].run === false && character[0].alive === true) {
             character[0].xp += 100
+            await db.query(
+                `UPDATE useer
+                SET 
+                coins = $1 WHERE id = $2`,
+                [coins,user]
+            )
+            console.log('USUARIO AÑADIR MONEDAS'+ user)
             console.log('VICTORIA')
         }
 
