@@ -507,12 +507,12 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         if (character[0].run === false && character[0].alive === true) {
             character[0].xp += 100
             await db.query(
-                `UPDATE useer
+                `UPDATE user
                 SET 
                 coins = $1 WHERE id = $2`,
                 [coins,user]
             )
-            console.log('USUARIO AÑADIR MONEDAS'+ user)
+            
             console.log('VICTORIA')
         }
 
@@ -532,7 +532,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             [character[0].hp, character[0].strength, character[0].agility, character[0].luck, character[0].alive, character[0].run, character[0].state, character[0].xp, idchar]);
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
-
+        console.log('USUARIO AÑADIR MONEDAS'+ user)
         console.log(`
 
             Historia:
