@@ -88,7 +88,7 @@ en la descripción del personaje para aplicarla a la narrativa pero que esta des
 del personaje sino que simplemente te ayude a sumergirte mas en la narrativa de la partida. Depemdiemdo de las acciones realizadas
 y la dificultad de las mismas le debes de dar una catidad de experiencia al jugador, teniendo en cuenta que el maximo que puedes
 ganar por partida es 100 puntos de experiencia, entonces añade muy poca experiencia por accion para que el completar la
-mision principal sea lo que te de la cantidad de experiencia maxima (100). Piensa que el texto se va a mostrar en un juego
+mision principal da un pequeño extra de experiencia al total de experienci adquirido. Piensa que el texto se va a mostrar en un juego
 asi que el formato debe de ser adecuado para ello, no uses saltos de linea innecesarios ni caracteres raros, usa un lenguaje
 adecuado para un juego de fantasia y dungeons and dragons, tiene que ser bonito de ver asi que no utilices carcteres
 extraños ni simbolos raros, intenta mostrar lo menos posibles las estadisticas del jugador en la narrativa, solo cuando sea necesario
@@ -137,7 +137,10 @@ puede utilizarse varias veces sin eliminarse hasta que se rompa o se te pierda p
 tiene un solo uso, y despues de su primer uso debe eliminarse, esto significa que habrá items que no tendras que borrar siempre 
 que se utilicen, asi q esos items no los elimines al primer uso ano ser que la narrativa diga lo contrario por algun factor poco comun 
 como podria ser que te lo roben, que se rompa, o que lo pierdas. Las monedas que consigas ves acumulandolas a un total, guarda siempre 
-el total de monedas. 
+el total de monedas. Piensa que tienes que dar menor cantidad de monedas que de experiencia, para darte un ejemplo mas o menos has de 
+dar 1 moneda por cada 5 de experiencia, esto es porque las monedas son muy valiosas y sirven para comprar objetos asi que vete con cuidado 
+a la hora de dar monedas para no pasarte, igual que la experiencia las monedas aumentan en cantidad dependiendo de la ronda en la que estes
+y la dificultad de cada accion.
 El array del personaje es este {{CHARACTER_ARRAY}}
 El array de los items que tiene el personaje {{ITEMS_ARRAY}}` // Prompt inicial
 
@@ -507,7 +510,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         if (character[0].run === false && character[0].alive === true) {
             character[0].xp += 100
             await db.query(
-                `UPDATE user
+                `UPDATE "user"
                 SET 
                 coins = $1 WHERE id = $2`,
                 [coins,user]
@@ -533,6 +536,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
         console.log('USUARIO AÑADIR MONEDAS'+ user)
+        console.log('COINS' + coins)
         console.log(`
 
             Historia:
