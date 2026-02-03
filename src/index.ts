@@ -515,7 +515,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             await db.query(
                 `UPDATE "user"
                 SET 
-                coins = $1 WHERE id = $2`,
+                coins = coins + $1 WHERE id = $2`,
                 [coins, user]
             )
 
