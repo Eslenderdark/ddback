@@ -141,7 +141,8 @@ el total de monedas. Piensa que tienes que dar menor cantidad de monedas que de 
 dar 1 moneda por cada 5 de experiencia, esto es porque las monedas son muy valiosas y sirven para comprar objetos asi que vete con cuidado 
 a la hora de dar monedas para no pasarte, igual que la experiencia las monedas aumentan en cantidad dependiendo de la ronda en la que estes
 y la dificultad de cada accion. El escalado de las monedas y la xp debe de ser lento para mantener un buen balance en el juego y recompensar 
-las acciones realizadas solo en rondas uy altas.
+las acciones realizadas solo en rondas uy altas. Siempre que el jugador complete la mision principal debe de ser recompensado con 
+un objeto especial o una mejora de estadisticas permanentes igual que cuando derrote a un jefe.
 Responde siempre en español y solo con la narrativa y lo que se indica en el prompt, estas en un juego solo texto que se tenga que ver
 en el juego.
 El array del personaje es este {{CHARACTER_ARRAY}}
