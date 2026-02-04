@@ -146,7 +146,10 @@ un objeto especial o una mejora de estadisticas permanentes igual que cuando der
 afecta a la calidad de los onjetos que consigues, cuanto mayor la suerte por encima de 100 encuentras mejores objetos que de normal igual que tienes mas 
 suerte en combate e interacciones. Muy importante apartir de ahora va a llegar una letra la cual definira la accion que hacer basandose 
 en las opciones d A/B/C de la accion anterior, asi que actua en forma de narrativa SIEMPRE a la hora de responder y todo en español de españa
-muy importante mantener en todo momento la narrativa en cada una de tus respuestas.
+muy importante mantener en todo momento la narrativa en cada una de tus respuestas, no enseñes nunca el pensamiento
+detras de la generacion de cada respuesta solo la narrativa. Recuerda que las monedas y la xp deben de estar balanceadas ñadae muy poca 
+cantidad de ellas en acciones normales 5 de xp y 1 moneda, y apartir d ahi incrementando muy poco a poco, basandote en las acciones
+que realiza el jugador y recompensando por su riesgo y tardanza.
 Responde siempre en español y solo con la narrativa y lo que se indica en el prompt, estas en un juego solo texto que se tenga que ver
 en el juego.
 El array del personaje es este {{CHARACTER_ARRAY}}
@@ -495,19 +498,13 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             response: response.text()
         };
 
-        const coins = gameResponse.coins
-        console.log('COINS: ' + coins)
-
-
-
-        character[0].hp = Number(gameResponse.hp)
-        character[0].strength = Number(gameResponse.strength)
-        character[0].agility = Number(gameResponse.agility)
-        character[0].luck = Number(gameResponse.luck)
-        character[0].alive = (gameResponse.alive === true || gameResponse.alive === false)
-        character[0].xp = gameResponse.xp
-
-        res.json(gameResponse) // Devolvemos el objeto con la respuesta y las estadísticas actualizadas
+        character[0].hp = Number(stats.hp)
+        character[0].strength = Number(stats.strength)
+        character[0].agility = Number(stats.agility)
+        character[0].luck = Number(stats.luck)
+        character[0].alive = stats.alive
+        character[0].run = stats.run
+        character[0].xp = stats.xp  
 
         // chaequeo de muerte y cambio de vida a 0 para que no explote el puto juego d los cojones y poner todo false por si la IA puto trolea
         if (character[0].hp <= 0) {
@@ -518,7 +515,6 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             console.log('MUERTO')
         }
 
-        //chequeo de victoria y añadir xp extra
         console.log('character.run: ' + character[0].run + ' y character.alive: ' + character[0].alive)
         if (character[0].run === false && character[0].alive === true) {
             console.log('SE ACTIVA LA VICTORIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
@@ -527,7 +523,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
                 `UPDATE "user" 
                 SET coins=coins+$1 
                 WHERE id=$2`,
-                [coins, user]
+                [stats.monedas, user]
             )
             console.log('MONEDAS TOTALES:' + monedas)
             console.log('VICTORIA VICTORIA VICTORIA VICTORIA VICTORIA')
@@ -562,7 +558,10 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             Suerte: ${gameResponse.luck}
             Alive: ${gameResponse.alive}
             `)
-        console.log('COINS' + coins)
+        console.log('COINS' + stats.monedas)
+
+        res.json(gameResponse) // Devolvemos el objeto con la respuesta y las estadísticas actualizadas
+
 
     } catch (err) {
         console.error(err);
