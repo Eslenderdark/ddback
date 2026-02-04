@@ -837,17 +837,6 @@ app.get('/getrankingbestplayers', async (req, res) => {
     }
 });
 
-function extractBetweenBraces(text: string): string | null {
-    const start = text.indexOf('{');
-    const end = text.lastIndexOf('}');
-
-    if (start === -1 || end === -1 || end <= start) {
-        return null;
-    }
-
-    return text.slice(start, end + 1);
-}
-
 app.get('/item-shop', async (req, res) => {
     try {
         const comunes = (await db.query(`SELECT * FROM item WHERE rareza = 'común' AND character_id IS NULL`)).rows;
@@ -903,69 +892,154 @@ app.get('/item-shop', async (req, res) => {
 });
 
 app.post('/item-shop', async (req, res) => {
+    console.log('item-shop POST')
     try {
-        const { userId, itemId, characterId } = req.body;
+        const {
+            userId,
+            itemId,
+            characterId,
+            isBox,
+            price,
+            tier,
+            boxType
+        } = req.body;
 
-        if (!userId || !itemId || !characterId) {
-            return res.status(400).json({ message: 'userId, itemId y characterId son requeridos' });
+        console.log('isBox: ' + isBox)
+
+       
+        if (!userId || !characterId || (!itemId && !isBox)) {
+            return res.status(400).json({
+                message: 'userId, characterId y (itemId o isBox) son requeridos'
+            });
         }
-        // usuario existe y monedas
-        const userResult = await db.query(
-            'SELECT coins FROM "user" WHERE id = $1',
-            [userId]
-        );
 
+        const userResult = await db.query('SELECT coins FROM "user" WHERE id = $1', [userId]);
+        console.log('userResult: ' + userResult)
         if (userResult.rows.length === 0) {
+            console.log('NO USER')
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
-
         const userCoins = userResult.rows[0].coins;
-        // personaje existe y es de el usuario
+        console.log('userCoins: ' + userCoins)
+
         const characterResult = await db.query(
             'SELECT * FROM character WHERE id = $1 AND user_id = $2',
             [characterId, userId]
         );
+        console.log('characterResult: ' + characterResult)
         if (characterResult.rows.length === 0) {
+            console.log('NO CHARACTER')
             return res.status(404).json({ message: 'Personaje no encontrado o no te pertenece' });
         }
-        // item existe y obtiene datos
-        const itemResult = await db.query(
-            'SELECT * FROM item WHERE id = $1 AND character_id IS NULL',
-            [itemId]
-        );
-        if (itemResult.rows.length === 0) {
-            return res.status(404).json({ message: 'Item no encontrado' });
+
+        let finalPrice = 0;
+        let itemToCreate = null;
+
+        if (isBox === true) {
+            console.log('isBox EMPEZANDO')
+            finalPrice = price;
+
+            const promptActualizado = `
+                Generame un item de tipo ${boxType}, este item viene de una caja que puede ser de 3 tipos madera, hierro o esmeralda 
+        cada una de estas cajas tiene una probabilidad de item de distinta calidad, la de madera tiene un 50% de dar un item comun,
+        un 30% de dar un item poco comun, un 15% de dar un item raro, un 4% de dar un item epico, un 0.9% de dar un item legendario y 
+        un 0.1% de dar un item mitico, la de hierro tiene un 25% de dar un item comun,
+        un 30% de dar un item poco comun, un 25% de dar un item raro, un 15% de dar un item epico, un 4% de dar un item legendario y 
+        un 1% de dar un item mitico y la de esmeralda tiene un 5% de dar un item comun,
+        un 10% de dar un item poco comun, un 40% de dar un item raro, un 25% de dar un item epico, un 15% de dar un item legendario y 
+        un 5% de dar un item mitico, esta caja que hemos abierto es de tipo ${tier}, cada rareza de item es mejor que la anterior,
+        esto significa que el precio es mayor dependiendo de cada rareza, comun 5-15, poco comun 20-40, raro 50-80, epico 90-110, legendario 120-200,
+        mitico de 210-500, tambien la hablidad que tienen que se definira en la descripcion varia caundo mayor sea la rareza mejor sera la habilidad,
+        por ejemplo un item comun puede ser una pocion que te cura si es objeto el tipo de item, un casco de madera si es armadura el tipo o 
+        una espada rota si es arma el tipo de item, y si es un item de rareza mitico pues el objeto puede ser un amuleto que le roba vida a los enemigos, 
+        una armadura que cuando te golpean hace daño al enemigo o lo envenena y si es un arma una espada mitica que atraviesa cualquier material y 
+        cada vez que la usas contra un enemigo aumenta tu fuerza. Piensa que estamos en un mundo de fantasia de humanos, elfos, orcs, goblins,
+        golems, entes de energia magica, magos, brujas, trasgos, dragones, todo en un ambiente medieval magico de fantasia, asi que los items deben
+        de estar relacionados con este mundo de fantasia en el que estamos, tambien piensa que el item sera untlizado luego en una partida 
+        de un juego de rol ambientado en lo anterior por eso necesitamos un balance dependiendo de la rareza de cada item.
+        Devuélveme OBLIGATORIAMENTE un JSON VÁLIDO, sin ningún texto adicional antes o después,
+        Con el item conseguido tras la apertura de la caja
+        El formato debe ser EXACTAMENTE este:
+        {
+            "name": string,
+            "description": string,
+            "price": number,
+            "rareza": string
         }
-        const itemTemplate = itemResult.rows[0];
-        const itemPrice = itemTemplate.price;
-        // el usuario tiene suficientes monedas para obtener el item
-        if (userCoins < itemPrice) {
+        NO INCLUYAS NINGÚN TIPO DE TEXTO ADICIONAL DE JSON O DE COMILLAS
+        NO envíes texto fuera del JSON.
+        NO encierres el JSON en comillas ni en bloques de código
+        NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con el JSON.
+        QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CON LOS VALORES DEL ITEM CONSEGUIDO.
+        `;
+
+            const chat = model.startChat();
+            const cajaResult = await chat.sendMessage(promptActualizado);
+            const rawText = cajaResult.response.text();
+
+            const cleanCajaResult = extractBetweenBraces(rawText);
+            console.log('cleanCajaResult: ' + cleanCajaResult)
+
+            if (!cleanCajaResult) {
+                console.log('La IA no genera item correcto')
+                return res.status(500).json({ message: 'La IA no generó un formato válido' });
+            }
+
+            itemToCreate = JSON.parse(cleanCajaResult);
+
+        }
+        else {
+            const itemResult = await db.query(
+                'SELECT * FROM item WHERE id = $1 AND character_id IS NULL',
+                [itemId]
+            );
+            if (itemResult.rows.length === 0) {
+                return res.status(404).json({ message: 'Item no encontrado' });
+            }
+            const itemTemplate = itemResult.rows[0];
+            finalPrice = itemTemplate.price;
+            itemToCreate = {
+                name: itemTemplate.name,
+                description: itemTemplate.description,
+                rareza: itemTemplate.rareza,
+                price: itemTemplate.price
+            };
+        }
+
+        if (userCoins < finalPrice) {
             return res.status(400).json({ message: 'No tienes suficientes monedas' });
         }
-        // quitar monedas al usuario
-        await db.query(
-            'UPDATE "user" SET coins = coins - $1 WHERE id = $2',
-            [itemPrice, userId]
-        );
-        // Duplicar el ítem añadiendo el character_id del personaje
+
+       
+        await db.query('UPDATE "user" SET coins = coins - $1 WHERE id = $2', [finalPrice, userId]);
+
         const newItemResult = await db.query(
             `INSERT INTO item (name, description, rareza, price, character_id)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
-            [itemTemplate.name, itemTemplate.description, itemTemplate.rareza, itemTemplate.price, characterId]
+            [itemToCreate.name, itemToCreate.description, itemToCreate.rareza, itemToCreate.price, characterId]
         );
-
+        console.log('FINALIZADO TODO OK')
         res.json({
             message: 'Compra exitosa',
-            coinsRemaining: userCoins - itemPrice,
+            coinsRemaining: userCoins - finalPrice,
             item: newItemResult.rows[0]
         });
 
     } catch (e) {
-        console.error(e);
-        res.status(500).json({ message: 'Error al procesar la compra' });
+        console.error('Error procesando compra:', e);
+        res.status(500).json({ message: 'Error interno al procesar la compra' });
     }
 });
+
+function extractBetweenBraces(text: string) {
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+        return text.substring(firstBrace, lastBrace + 1);
+    }
+    return null;
+}
 
 app.get('/users/:userId', async (req, res) => {
     try {
@@ -1111,7 +1185,6 @@ app.post('/market/buyitem', async (req, res) => {
         const item = itemResult.rows[0];
         const itemPrice = item.market_price;
 
-        // Verificar que el comprador tiene suficientes monedas
         const buyerResult = await db.query(
             'SELECT coins FROM "user" WHERE id = $1',
             [buyerId]
@@ -1171,3 +1244,38 @@ app.listen(port, () =>
     -   /geminiresponse
     -   
      `));
+
+
+// const itemsPrompt = `
+//         Generame un item de tipo {{TIPOCAJA}}, este item viene de una caja que puede ser de 3 tipos madera, hierro o esmeralda 
+//         cada una de estas cajas tiene una probabilidad de item de distinta calidad, la de madera tiene un 50% de dar un item comun,
+//         un 30% de dar un item poco comun, un 15% de dar un item raro, un 4% de dar un item epico, un 0.9% de dar un item legendario y 
+//         un 0.1% de dar un item mitico, la de hierro tiene un 25% de dar un item comun,
+//         un 30% de dar un item poco comun, un 25% de dar un item raro, un 15% de dar un item epico, un 4% de dar un item legendario y 
+//         un 1% de dar un item mitico y la de esmeralda tiene un 5% de dar un item comun,
+//         un 10% de dar un item poco comun, un 40% de dar un item raro, un 25% de dar un item epico, un 15% de dar un item legendario y 
+//         un 5% de dar un item mitico, esta caja que hemos abierto es de tipo {{CALIDADCAJA}}, cada rareza de item es mejor que la anterior,
+//         esto significa que el precio es mayor dependiendo de cada rareza, comun 5-15, poco comun 20-40, raro 50-80, epico 90-110, legendario 120-200,
+//         mitico de 210-500, tambien la hablidad que tienen que se definira en la descripcion varia caundo mayor sea la rareza mejor sera la habilidad,
+//         por ejemplo un item comun puede ser una pocion que te cura si es objeto el tipo de item, un casco de madera si es armadura el tipo o 
+//         una espada rota si es arma el tipo de item, y si es un item de rareza mitico pues el objeto puede ser un amuleto que le roba vida a los enemigos, 
+//         una armadura que cuando te golpean hace daño al enemigo o lo envenena y si es un arma una espada mitica que atraviesa cualquier material y 
+//         cada vez que la usas contra un enemigo aumenta tu fuerza. Piensa que estamos en un mundo de fantasia de humanos, elfos, orcs, goblins,
+//         golems, entes de energia magica, magos, brujas, trasgos, dragones, todo en un ambiente medieval magico de fantasia, asi que los items deben
+//         de estar relacionados con este mundo de fantasia en el que estamos, tambien piensa que el item sera untlizado luego en una partida 
+//         de un juego de rol ambientado en lo anterior por eso necesitamos un balance dependiendo de la rareza de cada item.
+//         Devuélveme OBLIGATORIAMENTE un JSON VÁLIDO, sin ningún texto adicional antes o después,
+//         Con el item conseguido tras la apertura de la caja
+//         El formato debe ser EXACTAMENTE este:
+//         {
+//             "name": string,
+//             "description": string,
+//             "price": number,
+//             "rareza": string
+//         }
+//         NO INCLUYAS NINGÚN TIPO DE TEXTO ADICIONAL DE JSON O DE COMILLAS
+//         NO envíes texto fuera del JSON.
+//         NO encierres el JSON en comillas ni en bloques de código
+//         NO añadas nada mas que lo mostrado en el formato porfavor necesito poder trabajar con el JSON.
+//         QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CON LOS VALORES DEL ITEM CONSEGUIDO.
+//         `;
