@@ -521,9 +521,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         if (character[0].run === false && character[0].alive === true) {
             character[0].xp += 100
             const monedas = await db.query(
-                `UPDATE "user"
-                SET 
-                coins = coins + $1 WHERE id = $2`,
+                `UPDATE "user" 
+                SET coins=coins+$1 
+                WHERE id=$2`,
                 [coins, user]
             )
             console.log('MONEDAS TOTALES:' + monedas)
