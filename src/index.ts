@@ -511,6 +511,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
         // chaequeo de muerte y cambio de vida a 0 para que no explote el puto juego d los cojones y poner todo false por si la IA puto trolea
         if (character[0].hp <= 0) {
+            console.log('SE ACTIVA LA MUERTEEEEEEEEEEEEEEEEEEEEEEEEEEEE')
             character[0].alive = false
             character[0].run = false
             character[0].hp = 0
@@ -518,7 +519,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         }
 
         //chequeo de victoria y añadir xp extra
+        console.log('character.run: ' + character[0].run + ' y character.alive: ' + character[0].alive)
         if (character[0].run === false && character[0].alive === true) {
+            console.log('SE ACTIVA LA VICTORIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
             character[0].xp += 100
             const monedas = await db.query(
                 `UPDATE "user" 
@@ -527,7 +530,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
                 [coins, user]
             )
             console.log('MONEDAS TOTALES:' + monedas)
-            console.log('VICTORIA')
+            console.log('VICTORIA VICTORIA VICTORIA VICTORIA VICTORIA')
         }
 
 
@@ -547,7 +550,6 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
         console.log('Personaje actualizado en la base de datos:', resultchar);
         console.log('USUARIO AÑADIR MONEDAS' + user)
-        console.log('COINS' + coins)
         console.log(`
 
             Historia:
@@ -560,6 +562,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             Suerte: ${gameResponse.luck}
             Alive: ${gameResponse.alive}
             `)
+        console.log('COINS' + coins)
 
     } catch (err) {
         console.error(err);
@@ -941,6 +944,14 @@ app.post('/item-shop', async (req, res) => {
         let itemToCreate = null;
 
         if (isBox === true) {
+            const charXP = characterResult.rows[0].xp;
+
+            if (tier === 'Hierro' && charXP < 500) {
+                return res.status(403).json({ message: 'El personaje no tiene suficiente XP (Mín. 500)' });
+            }
+            if (tier === 'Esmeralda' && charXP < 1000) {
+                return res.status(403).json({ message: 'El personaje no tiene suficiente XP (Mín. 1000)' });
+            }
             console.log('isBox EMPEZANDO')
             finalPrice = price;
 
