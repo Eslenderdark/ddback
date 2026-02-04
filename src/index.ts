@@ -144,7 +144,9 @@ y la dificultad de cada accion. El escalado de las monedas y la xp debe de ser l
 las acciones realizadas solo en rondas uy altas. Siempre que el jugador complete la mision principal debe de ser recompensado con 
 un objeto especial o una mejora de estadisticas permanentes igual que cuando derrote a un jefe. El valor normal d ela suerte es 100, esta misma
 afecta a la calidad de los onjetos que consigues, cuanto mayor la suerte por encima de 100 encuentras mejores objetos que de normal igual que tienes mas 
-suerte en combate e interacciones.
+suerte en combate e interacciones. Muy importante apartir de ahora va a llegar una letra la cual definira la accion que hacer basandose 
+en las opciones d A/B/C de la accion anterior, asi que actua en forma de narrativa SIEMPRE a la hora de responder y todo en español de españa
+muy importante mantener en todo momento la narrativa en cada una de tus respuestas.
 Responde siempre en español y solo con la narrativa y lo que se indica en el prompt, estas en un juego solo texto que se tenga que ver
 en el juego.
 El array del personaje es este {{CHARACTER_ARRAY}}
@@ -160,6 +162,7 @@ let gameResponse = {
     luck: 0,
     alive: true,
     run: true,
+    coins: 0,
     xp: 0,
     response: ''
 }
@@ -485,13 +488,15 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
             alive: stats.alive,
             run: stats.run,
+            coins: stats.monedas,
 
             xp: stats.xp,
 
             response: response.text()
         };
 
-        const coins = stats.monedas
+        const coins = gameResponse.coins
+        console.log('COINS: ' + coins)
 
 
 
@@ -515,13 +520,13 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         //chequeo de victoria y añadir xp extra
         if (character[0].run === false && character[0].alive === true) {
             character[0].xp += 100
-            await db.query(
+            const monedas = await db.query(
                 `UPDATE "user"
                 SET 
                 coins = coins + $1 WHERE id = $2`,
                 [coins, user]
             )
-
+            console.log('MONEDAS TOTALES:' + monedas)
             console.log('VICTORIA')
         }
 
@@ -956,7 +961,15 @@ app.post('/item-shop', async (req, res) => {
         cada vez que la usas contra un enemigo aumenta tu fuerza. Piensa que estamos en un mundo de fantasia de humanos, elfos, orcs, goblins,
         golems, entes de energia magica, magos, brujas, trasgos, dragones, todo en un ambiente medieval magico de fantasia, asi que los items deben
         de estar relacionados con este mundo de fantasia en el que estamos, tambien piensa que el item sera untlizado luego en una partida 
-        de un juego de rol ambientado en lo anterior por eso necesitamos un balance dependiendo de la rareza de cada item.
+        de un juego de rol ambientado en lo anterior por eso necesitamos un balance dependiendo de la rareza de cada item. Para que entiendas 
+        un poco mas como funciona el juego y puedas generar los ojetos de mejor manera basandote en las reglas del juego y variables que contiene,
+        es un juego de rol el cual va por turnos, los items no pueden tener efectos de turnos, es decir no pueden cambiar cosas por un cierto numero de turnos
+        (ejemplo: aumenta el daño durante dos turnos, esto NO LO PUEDE HACER), tampoco puede variar las estadisticas del personaje las cuales son vida, fuerza, 
+        agilidad y suerte, al obtenerlo, pero si despues de su uso por ejemplo, un martillo que despues de usarlo sube la fuerza +5, esto si que podri suceder 
+        lo q no podria suceder es una armadura que augmenta la vida un 10%, eso no, pero si que puede ser una armadura que reduce el daño recibido.
+        A la hora de subir estadisticas, ten en cuent aque las estadisticas por base son todas 100, eso quiere decir que subir una estadistica 
+        +5 puntos es mucho, asi q ten en cuenta eso a la hora de creear el objeto y mantener un balance, las describciones no tienen que ser muy largas, intenta 
+        limitarlas a 50 palabras mas o menos como maximo 75 palabras. Ahora con todo esto generame el objeto.
         Devuélveme OBLIGATORIAMENTE un JSON VÁLIDO, sin ningún texto adicional antes o después,
         Con el item conseguido tras la apertura de la caja
         El formato debe ser EXACTAMENTE este:
