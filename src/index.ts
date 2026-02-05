@@ -1259,13 +1259,21 @@ app.post('/market/buyitem', async (req, res) => {
 app.get("/music/:charId", async (req, res) => {
     try {
         const { charId } = req.params;
+<<<<<<< HEAD
+=======
+        let narrative = String(req.query.narrative || "");
+>>>>>>> 5c4870003c06c0c7707be272ca9b61267a1d4cc3
 
         if (!charId) {
             return res.status(400).json({ error: "charId es requerido" });
         }
 
         const charResult = await db.query(
+<<<<<<< HEAD
             `SELECT id, name, hp, alive, run, state FROM "character" WHERE id = $1`,
+=======
+            `SELECT id, name, run, state FROM "character" WHERE id = $1`,
+>>>>>>> 5c4870003c06c0c7707be272ca9b61267a1d4cc3
             [charId],
         );
 
@@ -1275,41 +1283,71 @@ app.get("/music/:charId", async (req, res) => {
 
         const char = charResult.rows[0];
 
+<<<<<<< HEAD
         const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         let contextPrompt = `Basándote en el siguiente contexto de un juego de rol de fantasía, devuélveme SOLO UNA de estas palabras exactas, sin explicaciones ni texto adicional: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión".
+=======
+        if (!narrative || narrative.trim().length === 0) {
+            console.log("No hay narrativa, devolviendo Exploración por defecto");
+            return res.json({ music: "Exploración" });
+        }
 
-Contexto del personaje:
+        if (narrative.length > 2000) {
+            narrative = "..." + narrative.slice(-2000);
+            console.log("Narrativa recortada a últimos 2000 caracteres");
+        }
+>>>>>>> 5c4870003c06c0c7707be272ca9b61267a1d4cc3
+
+        const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        let contextPrompt = `Basándote en la siguiente narrativa de un juego de rol de fantasía, responde SOLO con una de estas palabras exactas: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión". 
+
+IMPORTANTE: Analiza lo que está pasando en la ÚLTIMA parte de la narrativa (lo más reciente) para elegir la música adecuada.
+
+NARRATIVA RECIENTE:
+${narrative}
+
+INFORMACIÓN DEL PERSONAJE:
 - Nombre: ${char.name}
-- Vida: ${char.hp}
-- Está vivo: ${char.alive}
-- Partida activa: ${char.run}
-- Estado actual: ${char.state ? char.state.name : "Normal"}
-- Descripción del estado: ${char.state ? char.state.description : "Sin estados especiales"}
+- Estado: ${char.state ? char.state.name : "Normal"}
+${char.state && char.state.description ? `- ${char.state.description}` : ''}
 
-Instrucciones para elegir la música:
+CATEGORÍAS DE MÚSICA:
+- "Combate": El personaje está luchando activamente , en batalla, atacando o defendiéndose
+- "Tensión": Hay peligro inminente, enemigos cerca, pero aún NO está en combate activo
+- "Misterio": Situaciones enigmáticas, sobrenaturales, lugares oscuros inexplorados
+- "Exploración": Viajando, caminando, explorando de forma tranquila sin peligro
+- "Descanso": En lugares seguros, ciudades, tabernas, descansando, conversando
 
-1. "Combate" - SOLO cuando el personaje está en batalla activa contra enemigos. Indicadores: menciones de pelea, atacando, defendiéndose, esquivando ataques, luchando contra enemigos.
+Responde ÚNICAMENTE con UNA de estas palabras exactas sin ningún otro texto.`;
 
-2. "Tensión" - Cuando hay peligro inminente pero NO está en combate todavía. Indicadores: enemigos cerca, ambiente hostil, situación de riesgo, acercándose a algo peligroso, sensación de amenaza.
+        const result = await musicModel.generateContent(contextPrompt);
+        let musicChoice = result.response.text().trim();
 
-3. "Misterio" - Para situaciones realmente misteriosas, enigmáticas o sobrenaturales. Indicadores: lugares oscuros inexplorados, eventos extraños, presencias sobrenaturales, enigmas, ruinas antiguas, magia desconocida.
+        const validChoices = ["Combate", "Exploración", "Misterio", "Descanso", "Tensión"];
 
-4. "Exploración" - Cuando está viajando, caminando, explorando de forma normal sin peligro aparente. Indicadores: viajando por caminos, explorando zonas seguras, buscando algo, moviéndose por el mundo.
+        musicChoice = musicChoice.replace(/[\s\n\r]+/g, "");
 
-5. "Descanso" - En lugares seguros, ciudades, tabernas, campamentos, descansando o en paz. Indicadores: en ciudad, en taberna, descansando, lugar seguro, conversando tranquilamente, sanando, comprando.
+        const found = validChoices.find(opt => musicChoice.toLowerCase() === opt.toLowerCase());
 
-IMPORTANTE: 
-- NO confundas poca vida con combate (puede haberse caído o lastimado sin estar luchando)
-- Prioriza el contexto de la ACCIÓN ACTUAL del personaje, no solo sus estadísticas
-- Responde ÚNICAMENTE con una de estas palabras exactas: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión"`;
+        const finalChoice = found || "Exploración";
 
+<<<<<<< HEAD
         const result = await musicModel.generateContent(contextPrompt);
         const musicChoice = result.response.text().trim();
 
         console.log("Respuesta música para personaje", charId, ":", musicChoice);
 
         res.json({ music: musicChoice });
+=======
+        console.log("Narrativa recibida (últimos 150 chars):", narrative.slice(-150));
+        console.log("Estado del personaje:", char.state?.name || "Normal");
+        console.log("Respuesta IA bruta:", musicChoice);
+        console.log("Música final para personaje", charId, ":", finalChoice);
+
+        res.json({ music: finalChoice });
+>>>>>>> 5c4870003c06c0c7707be272ca9b61267a1d4cc3
     } catch (error) {
         console.error("Error obteniendo música:", error);
         res.status(500).json({ error: "Error generando música" });
