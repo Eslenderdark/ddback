@@ -504,7 +504,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         character[0].luck = Number(stats.luck)
         character[0].alive = stats.alive
         character[0].run = stats.run
-        character[0].xp = stats.xp  
+        character[0].xp = stats.xp
 
         // chaequeo de muerte y cambio de vida a 0 para que no explote el puto juego d los cojones y poner todo false por si la IA puto trolea
         if (character[0].hp <= 0) {
@@ -913,7 +913,7 @@ app.post('/item-shop', async (req, res) => {
 
         console.log('isBox: ' + isBox)
 
-       
+
         if (!userId || !characterId || (!itemId && !isBox)) {
             return res.status(400).json({
                 message: 'userId, characterId y (itemId o isBox) son requeridos'
@@ -1033,7 +1033,7 @@ app.post('/item-shop', async (req, res) => {
             return res.status(400).json({ message: 'No tienes suficientes monedas' });
         }
 
-       
+
         await db.query('UPDATE "user" SET coins = coins - $1 WHERE id = $2', [finalPrice, userId]);
 
         const newItemResult = await db.query(
@@ -1256,63 +1256,79 @@ app.post('/market/buyitem', async (req, res) => {
 });
 
 app.get("/music/:charId", async (req, res) => {
-  try {
-    const { charId } = req.params;
+    try {
+        const { charId } = req.params;
+        let narrative = String(req.query.narrative || "");
 
-    if (!charId) {
-      return res.status(400).json({ error: "charId es requerido" });
-    }
+        if (!charId) {
+            return res.status(400).json({ error: "charId es requerido" });
+        }
 
-    const charResult = await db.query(
-      `SELECT id, name, hp, alive, run, state FROM "character" WHERE id = $1`,
-      [charId],
-    );
+        const charResult = await db.query(
+            `SELECT id, name, run, state FROM "character" WHERE id = $1`,
+            [charId],
+        );
 
-    if (charResult.rows.length === 0) {
-      return res.status(404).json({ error: "Personaje no encontrado" });
-    }
+        if (charResult.rows.length === 0) {
+            return res.status(404).json({ error: "Personaje no encontrado" });
+        }
 
-    const char = charResult.rows[0];
+        const char = charResult.rows[0];
 
-    const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        if (!narrative || narrative.trim().length === 0) {
+            console.log("No hay narrativa, devolviendo Exploración por defecto");
+            return res.json({ music: "Exploración" });
+        }
 
-    let contextPrompt = `Basándote en el siguiente contexto de un juego de rol de fantasía, devuélveme SOLO UNA de estas palabras exactas, sin explicaciones ni texto adicional: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión".
+        if (narrative.length > 2000) {
+            narrative = "..." + narrative.slice(-2000);
+            console.log("Narrativa recortada a últimos 2000 caracteres");
+        }
 
-Contexto del personaje:
+        const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        let contextPrompt = `Basándote en la siguiente narrativa de un juego de rol de fantasía, responde SOLO con una de estas palabras exactas: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión". 
+
+IMPORTANTE: Analiza lo que está pasando en la ÚLTIMA parte de la narrativa (lo más reciente) para elegir la música adecuada.
+
+NARRATIVA RECIENTE:
+${narrative}
+
+INFORMACIÓN DEL PERSONAJE:
 - Nombre: ${char.name}
-- Vida: ${char.hp}
-- Está vivo: ${char.alive}
-- Partida activa: ${char.run}
-- Estado actual: ${char.state ? char.state.name : "Normal"}
-- Descripción del estado: ${char.state ? char.state.description : "Sin estados especiales"}
+- Estado: ${char.state ? char.state.name : "Normal"}
+${char.state && char.state.description ? `- ${char.state.description}` : ''}
 
-Instrucciones para elegir la música:
+CATEGORÍAS DE MÚSICA:
+- "Combate": El personaje está luchando activamente , en batalla, atacando o defendiéndose
+- "Tensión": Hay peligro inminente, enemigos cerca, pero aún NO está en combate activo
+- "Misterio": Situaciones enigmáticas, sobrenaturales, lugares oscuros inexplorados
+- "Exploración": Viajando, caminando, explorando de forma tranquila sin peligro
+- "Descanso": En lugares seguros, ciudades, tabernas, descansando, conversando
 
-1. "Combate" - SOLO cuando el personaje está en batalla activa contra enemigos. Indicadores: menciones de pelea, atacando, defendiéndose, esquivando ataques, luchando contra enemigos.
+Responde ÚNICAMENTE con UNA de estas palabras exactas sin ningún otro texto.`;
 
-2. "Tensión" - Cuando hay peligro inminente pero NO está en combate todavía. Indicadores: enemigos cerca, ambiente hostil, situación de riesgo, acercándose a algo peligroso, sensación de amenaza.
+        const result = await musicModel.generateContent(contextPrompt);
+        let musicChoice = result.response.text().trim();
 
-3. "Misterio" - Para situaciones realmente misteriosas, enigmáticas o sobrenaturales. Indicadores: lugares oscuros inexplorados, eventos extraños, presencias sobrenaturales, enigmas, ruinas antiguas, magia desconocida.
+        const validChoices = ["Combate", "Exploración", "Misterio", "Descanso", "Tensión"];
 
-4. "Exploración" - Cuando está viajando, caminando, explorando de forma normal sin peligro aparente. Indicadores: viajando por caminos, explorando zonas seguras, buscando algo, moviéndose por el mundo.
+        musicChoice = musicChoice.replace(/[\s\n\r]+/g, "");
 
-5. "Descanso" - En lugares seguros, ciudades, tabernas, campamentos, descansando o en paz. Indicadores: en ciudad, en taberna, descansando, lugar seguro, conversando tranquilamente, sanando, comprando.
+        const found = validChoices.find(opt => musicChoice.toLowerCase() === opt.toLowerCase());
 
-IMPORTANTE: 
-- NO confundas poca vida con combate (puede haberse caído o lastimado sin estar luchando)
-- Prioriza el contexto de la ACCIÓN ACTUAL del personaje, no solo sus estadísticas
-- Responde ÚNICAMENTE con una de estas palabras exactas: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión"`;
+        const finalChoice = found || "Exploración";
 
-    const result = await musicModel.generateContent(contextPrompt);
-    const musicChoice = result.response.text().trim();
+        console.log("Narrativa recibida (últimos 150 chars):", narrative.slice(-150));
+        console.log("Estado del personaje:", char.state?.name || "Normal");
+        console.log("Respuesta IA bruta:", musicChoice);
+        console.log("Música final para personaje", charId, ":", finalChoice);
 
-    console.log("Respuesta música para personaje", charId, ":", musicChoice);
-
-    res.json({ music: musicChoice });
-  } catch (error) {
-    console.error("Error obteniendo música:", error);
-    res.status(500).json({ error: "Error generando música" });
-  }
+        res.json({ music: finalChoice });
+    } catch (error) {
+        console.error("Error obteniendo música:", error);
+        res.status(500).json({ error: "Error generando música" });
+    }
 });
 
 const port = 3000;
@@ -1329,22 +1345,22 @@ app.listen(port, () =>
 
 
 // const itemsPrompt = `
-//         Generame un item de tipo {{TIPOCAJA}}, este item viene de una caja que puede ser de 3 tipos madera, hierro o esmeralda 
+//         Generame un item de tipo {{TIPOCAJA}}, este item viene de una caja que puede ser de 3 tipos madera, hierro o esmeralda
 //         cada una de estas cajas tiene una probabilidad de item de distinta calidad, la de madera tiene un 50% de dar un item comun,
-//         un 30% de dar un item poco comun, un 15% de dar un item raro, un 4% de dar un item epico, un 0.9% de dar un item legendario y 
+//         un 30% de dar un item poco comun, un 15% de dar un item raro, un 4% de dar un item epico, un 0.9% de dar un item legendario y
 //         un 0.1% de dar un item mitico, la de hierro tiene un 25% de dar un item comun,
-//         un 30% de dar un item poco comun, un 25% de dar un item raro, un 15% de dar un item epico, un 4% de dar un item legendario y 
+//         un 30% de dar un item poco comun, un 25% de dar un item raro, un 15% de dar un item epico, un 4% de dar un item legendario y
 //         un 1% de dar un item mitico y la de esmeralda tiene un 5% de dar un item comun,
-//         un 10% de dar un item poco comun, un 40% de dar un item raro, un 25% de dar un item epico, un 15% de dar un item legendario y 
+//         un 10% de dar un item poco comun, un 40% de dar un item raro, un 25% de dar un item epico, un 15% de dar un item legendario y
 //         un 5% de dar un item mitico, esta caja que hemos abierto es de tipo {{CALIDADCAJA}}, cada rareza de item es mejor que la anterior,
 //         esto significa que el precio es mayor dependiendo de cada rareza, comun 5-15, poco comun 20-40, raro 50-80, epico 90-110, legendario 120-200,
 //         mitico de 210-500, tambien la hablidad que tienen que se definira en la descripcion varia caundo mayor sea la rareza mejor sera la habilidad,
-//         por ejemplo un item comun puede ser una pocion que te cura si es objeto el tipo de item, un casco de madera si es armadura el tipo o 
-//         una espada rota si es arma el tipo de item, y si es un item de rareza mitico pues el objeto puede ser un amuleto que le roba vida a los enemigos, 
-//         una armadura que cuando te golpean hace daño al enemigo o lo envenena y si es un arma una espada mitica que atraviesa cualquier material y 
+//         por ejemplo un item comun puede ser una pocion que te cura si es objeto el tipo de item, un casco de madera si es armadura el tipo o
+//         una espada rota si es arma el tipo de item, y si es un item de rareza mitico pues el objeto puede ser un amuleto que le roba vida a los enemigos,
+//         una armadura que cuando te golpean hace daño al enemigo o lo envenena y si es un arma una espada mitica que atraviesa cualquier material y
 //         cada vez que la usas contra un enemigo aumenta tu fuerza. Piensa que estamos en un mundo de fantasia de humanos, elfos, orcs, goblins,
 //         golems, entes de energia magica, magos, brujas, trasgos, dragones, todo en un ambiente medieval magico de fantasia, asi que los items deben
-//         de estar relacionados con este mundo de fantasia en el que estamos, tambien piensa que el item sera untlizado luego en una partida 
+//         de estar relacionados con este mundo de fantasia en el que estamos, tambien piensa que el item sera untlizado luego en una partida
 //         de un juego de rol ambientado en lo anterior por eso necesitamos un balance dependiendo de la rareza de cada item.
 //         Devuélveme OBLIGATORIAMENTE un JSON VÁLIDO, sin ningún texto adicional antes o después,
 //         Con el item conseguido tras la apertura de la caja
