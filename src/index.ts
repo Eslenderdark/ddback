@@ -1255,6 +1255,65 @@ app.post('/market/buyitem', async (req, res) => {
     }
 });
 
+app.get("/music/:charId", async (req, res) => {
+  try {
+    const { charId } = req.params;
+
+    if (!charId) {
+      return res.status(400).json({ error: "charId es requerido" });
+    }
+
+    const charResult = await db.query(
+      `SELECT id, name, hp, alive, run, state FROM "character" WHERE id = $1`,
+      [charId],
+    );
+
+    if (charResult.rows.length === 0) {
+      return res.status(404).json({ error: "Personaje no encontrado" });
+    }
+
+    const char = charResult.rows[0];
+
+    const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    let contextPrompt = `Basándote en el siguiente contexto de un juego de rol de fantasía, devuélveme SOLO UNA de estas palabras exactas, sin explicaciones ni texto adicional: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión".
+
+Contexto del personaje:
+- Nombre: ${char.name}
+- Vida: ${char.hp}
+- Está vivo: ${char.alive}
+- Partida activa: ${char.run}
+- Estado actual: ${char.state ? char.state.name : "Normal"}
+- Descripción del estado: ${char.state ? char.state.description : "Sin estados especiales"}
+
+Instrucciones para elegir la música:
+
+1. "Combate" - SOLO cuando el personaje está en batalla activa contra enemigos. Indicadores: menciones de pelea, atacando, defendiéndose, esquivando ataques, luchando contra enemigos.
+
+2. "Tensión" - Cuando hay peligro inminente pero NO está en combate todavía. Indicadores: enemigos cerca, ambiente hostil, situación de riesgo, acercándose a algo peligroso, sensación de amenaza.
+
+3. "Misterio" - Para situaciones realmente misteriosas, enigmáticas o sobrenaturales. Indicadores: lugares oscuros inexplorados, eventos extraños, presencias sobrenaturales, enigmas, ruinas antiguas, magia desconocida.
+
+4. "Exploración" - Cuando está viajando, caminando, explorando de forma normal sin peligro aparente. Indicadores: viajando por caminos, explorando zonas seguras, buscando algo, moviéndose por el mundo.
+
+5. "Descanso" - En lugares seguros, ciudades, tabernas, campamentos, descansando o en paz. Indicadores: en ciudad, en taberna, descansando, lugar seguro, conversando tranquilamente, sanando, comprando.
+
+IMPORTANTE: 
+- NO confundas poca vida con combate (puede haberse caído o lastimado sin estar luchando)
+- Prioriza el contexto de la ACCIÓN ACTUAL del personaje, no solo sus estadísticas
+- Responde ÚNICAMENTE con una de estas palabras exactas: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión"`;
+
+    const result = await musicModel.generateContent(contextPrompt);
+    const musicChoice = result.response.text().trim();
+
+    console.log("Respuesta música para personaje", charId, ":", musicChoice);
+
+    res.json({ music: musicChoice });
+  } catch (error) {
+    console.error("Error obteniendo música:", error);
+    res.status(500).json({ error: "Error generando música" });
+  }
+});
 
 const port = 3000;
 
