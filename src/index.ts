@@ -215,6 +215,7 @@ app.get('/gemini/:charId', async (req, res) => {
         }
 
         const char = result.rows[0];
+        character[0].state = char.state;
 
         const characterArray = [{
             id: char.id,
@@ -504,7 +505,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         character[0].luck = Number(stats.luck)
         character[0].alive = stats.alive
         character[0].run = stats.run
-        character[0].xp = stats.xp  
+        character[0].xp = stats.xp
 
         // chaequeo de muerte y cambio de vida a 0 para que no explote el puto juego d los cojones y poner todo false por si la IA puto trolea
         if (character[0].hp <= 0) {
@@ -913,7 +914,7 @@ app.post('/item-shop', async (req, res) => {
 
         console.log('isBox: ' + isBox)
 
-       
+
         if (!userId || !characterId || (!itemId && !isBox)) {
             return res.status(400).json({
                 message: 'userId, characterId y (itemId o isBox) son requeridos'
@@ -1033,7 +1034,7 @@ app.post('/item-shop', async (req, res) => {
             return res.status(400).json({ message: 'No tienes suficientes monedas' });
         }
 
-       
+
         await db.query('UPDATE "user" SET coins = coins - $1 WHERE id = $2', [finalPrice, userId]);
 
         const newItemResult = await db.query(
@@ -1256,27 +1257,27 @@ app.post('/market/buyitem', async (req, res) => {
 });
 
 app.get("/music/:charId", async (req, res) => {
-  try {
-    const { charId } = req.params;
+    try {
+        const { charId } = req.params;
 
-    if (!charId) {
-      return res.status(400).json({ error: "charId es requerido" });
-    }
+        if (!charId) {
+            return res.status(400).json({ error: "charId es requerido" });
+        }
 
-    const charResult = await db.query(
-      `SELECT id, name, hp, alive, run, state FROM "character" WHERE id = $1`,
-      [charId],
-    );
+        const charResult = await db.query(
+            `SELECT id, name, hp, alive, run, state FROM "character" WHERE id = $1`,
+            [charId],
+        );
 
-    if (charResult.rows.length === 0) {
-      return res.status(404).json({ error: "Personaje no encontrado" });
-    }
+        if (charResult.rows.length === 0) {
+            return res.status(404).json({ error: "Personaje no encontrado" });
+        }
 
-    const char = charResult.rows[0];
+        const char = charResult.rows[0];
 
-    const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    let contextPrompt = `Basándote en el siguiente contexto de un juego de rol de fantasía, devuélveme SOLO UNA de estas palabras exactas, sin explicaciones ni texto adicional: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión".
+        let contextPrompt = `Basándote en el siguiente contexto de un juego de rol de fantasía, devuélveme SOLO UNA de estas palabras exactas, sin explicaciones ni texto adicional: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión".
 
 Contexto del personaje:
 - Nombre: ${char.name}
@@ -1303,16 +1304,16 @@ IMPORTANTE:
 - Prioriza el contexto de la ACCIÓN ACTUAL del personaje, no solo sus estadísticas
 - Responde ÚNICAMENTE con una de estas palabras exactas: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión"`;
 
-    const result = await musicModel.generateContent(contextPrompt);
-    const musicChoice = result.response.text().trim();
+        const result = await musicModel.generateContent(contextPrompt);
+        const musicChoice = result.response.text().trim();
 
-    console.log("Respuesta música para personaje", charId, ":", musicChoice);
+        console.log("Respuesta música para personaje", charId, ":", musicChoice);
 
-    res.json({ music: musicChoice });
-  } catch (error) {
-    console.error("Error obteniendo música:", error);
-    res.status(500).json({ error: "Error generando música" });
-  }
+        res.json({ music: musicChoice });
+    } catch (error) {
+        console.error("Error obteniendo música:", error);
+        res.status(500).json({ error: "Error generando música" });
+    }
 });
 
 const port = 3000;
@@ -1329,22 +1330,22 @@ app.listen(port, () =>
 
 
 // const itemsPrompt = `
-//         Generame un item de tipo {{TIPOCAJA}}, este item viene de una caja que puede ser de 3 tipos madera, hierro o esmeralda 
+//         Generame un item de tipo {{TIPOCAJA}}, este item viene de una caja que puede ser de 3 tipos madera, hierro o esmeralda
 //         cada una de estas cajas tiene una probabilidad de item de distinta calidad, la de madera tiene un 50% de dar un item comun,
-//         un 30% de dar un item poco comun, un 15% de dar un item raro, un 4% de dar un item epico, un 0.9% de dar un item legendario y 
+//         un 30% de dar un item poco comun, un 15% de dar un item raro, un 4% de dar un item epico, un 0.9% de dar un item legendario y
 //         un 0.1% de dar un item mitico, la de hierro tiene un 25% de dar un item comun,
-//         un 30% de dar un item poco comun, un 25% de dar un item raro, un 15% de dar un item epico, un 4% de dar un item legendario y 
+//         un 30% de dar un item poco comun, un 25% de dar un item raro, un 15% de dar un item epico, un 4% de dar un item legendario y
 //         un 1% de dar un item mitico y la de esmeralda tiene un 5% de dar un item comun,
-//         un 10% de dar un item poco comun, un 40% de dar un item raro, un 25% de dar un item epico, un 15% de dar un item legendario y 
+//         un 10% de dar un item poco comun, un 40% de dar un item raro, un 25% de dar un item epico, un 15% de dar un item legendario y
 //         un 5% de dar un item mitico, esta caja que hemos abierto es de tipo {{CALIDADCAJA}}, cada rareza de item es mejor que la anterior,
 //         esto significa que el precio es mayor dependiendo de cada rareza, comun 5-15, poco comun 20-40, raro 50-80, epico 90-110, legendario 120-200,
 //         mitico de 210-500, tambien la hablidad que tienen que se definira en la descripcion varia caundo mayor sea la rareza mejor sera la habilidad,
-//         por ejemplo un item comun puede ser una pocion que te cura si es objeto el tipo de item, un casco de madera si es armadura el tipo o 
-//         una espada rota si es arma el tipo de item, y si es un item de rareza mitico pues el objeto puede ser un amuleto que le roba vida a los enemigos, 
-//         una armadura que cuando te golpean hace daño al enemigo o lo envenena y si es un arma una espada mitica que atraviesa cualquier material y 
+//         por ejemplo un item comun puede ser una pocion que te cura si es objeto el tipo de item, un casco de madera si es armadura el tipo o
+//         una espada rota si es arma el tipo de item, y si es un item de rareza mitico pues el objeto puede ser un amuleto que le roba vida a los enemigos,
+//         una armadura que cuando te golpean hace daño al enemigo o lo envenena y si es un arma una espada mitica que atraviesa cualquier material y
 //         cada vez que la usas contra un enemigo aumenta tu fuerza. Piensa que estamos en un mundo de fantasia de humanos, elfos, orcs, goblins,
 //         golems, entes de energia magica, magos, brujas, trasgos, dragones, todo en un ambiente medieval magico de fantasia, asi que los items deben
-//         de estar relacionados con este mundo de fantasia en el que estamos, tambien piensa que el item sera untlizado luego en una partida 
+//         de estar relacionados con este mundo de fantasia en el que estamos, tambien piensa que el item sera untlizado luego en una partida
 //         de un juego de rol ambientado en lo anterior por eso necesitamos un balance dependiendo de la rareza de cada item.
 //         Devuélveme OBLIGATORIAMENTE un JSON VÁLIDO, sin ningún texto adicional antes o después,
 //         Con el item conseguido tras la apertura de la caja
