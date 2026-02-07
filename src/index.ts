@@ -1259,21 +1259,14 @@ app.post('/market/buyitem', async (req, res) => {
 app.get("/music/:charId", async (req, res) => {
     try {
         const { charId } = req.params;
-<<<<<<< HEAD
-=======
         let narrative = String(req.query.narrative || "");
->>>>>>> 5c4870003c06c0c7707be272ca9b61267a1d4cc3
 
         if (!charId) {
             return res.status(400).json({ error: "charId es requerido" });
         }
 
         const charResult = await db.query(
-<<<<<<< HEAD
-            `SELECT id, name, hp, alive, run, state FROM "character" WHERE id = $1`,
-=======
             `SELECT id, name, run, state FROM "character" WHERE id = $1`,
->>>>>>> 5c4870003c06c0c7707be272ca9b61267a1d4cc3
             [charId],
         );
 
@@ -1283,11 +1276,6 @@ app.get("/music/:charId", async (req, res) => {
 
         const char = charResult.rows[0];
 
-<<<<<<< HEAD
-        const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-        let contextPrompt = `Basándote en el siguiente contexto de un juego de rol de fantasía, devuélveme SOLO UNA de estas palabras exactas, sin explicaciones ni texto adicional: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión".
-=======
         if (!narrative || narrative.trim().length === 0) {
             console.log("No hay narrativa, devolviendo Exploración por defecto");
             return res.json({ music: "Exploración" });
@@ -1297,30 +1285,29 @@ app.get("/music/:charId", async (req, res) => {
             narrative = "..." + narrative.slice(-2000);
             console.log("Narrativa recortada a últimos 2000 caracteres");
         }
->>>>>>> 5c4870003c06c0c7707be272ca9b61267a1d4cc3
 
         const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         let contextPrompt = `Basándote en la siguiente narrativa de un juego de rol de fantasía, responde SOLO con una de estas palabras exactas: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión". 
 
-IMPORTANTE: Analiza lo que está pasando en la ÚLTIMA parte de la narrativa (lo más reciente) para elegir la música adecuada.
+        IMPORTANTE: Analiza lo que está pasando en la ÚLTIMA parte de la narrativa (lo más reciente) para elegir la música adecuada.
 
-NARRATIVA RECIENTE:
-${narrative}
+        NARRATIVA RECIENTE:
+        ${narrative}
 
-INFORMACIÓN DEL PERSONAJE:
-- Nombre: ${char.name}
-- Estado: ${char.state ? char.state.name : "Normal"}
-${char.state && char.state.description ? `- ${char.state.description}` : ''}
+        INFORMACIÓN DEL PERSONAJE:
+        - Nombre: ${char.name}
+        - Estado: ${char.state ? char.state.name : "Normal"}
+        ${char.state && char.state.description ? `- ${char.state.description}` : ''}
 
-CATEGORÍAS DE MÚSICA:
-- "Combate": El personaje está luchando activamente , en batalla, atacando o defendiéndose
-- "Tensión": Hay peligro inminente, enemigos cerca, pero aún NO está en combate activo
-- "Misterio": Situaciones enigmáticas, sobrenaturales, lugares oscuros inexplorados
-- "Exploración": Viajando, caminando, explorando de forma tranquila sin peligro
-- "Descanso": En lugares seguros, ciudades, tabernas, descansando, conversando
+        CATEGORÍAS DE MÚSICA:
+        - "Combate": El personaje está luchando activamente , en batalla, atacando o defendiéndose
+        - "Tensión": Hay peligro inminente, enemigos cerca, pero aún NO está en combate activo
+        - "Misterio": Situaciones enigmáticas, sobrenaturales, lugares oscuros inexplorados
+        - "Exploración": Viajando, caminando, explorando de forma tranquila sin peligro
+        - "Descanso": En lugares seguros, ciudades, tabernas, descansando, conversando
 
-Responde ÚNICAMENTE con UNA de estas palabras exactas sin ningún otro texto.`;
+        Responde ÚNICAMENTE con UNA de estas palabras exactas sin ningún otro texto.`;
 
         const result = await musicModel.generateContent(contextPrompt);
         let musicChoice = result.response.text().trim();
@@ -1333,21 +1320,12 @@ Responde ÚNICAMENTE con UNA de estas palabras exactas sin ningún otro texto.`;
 
         const finalChoice = found || "Exploración";
 
-<<<<<<< HEAD
-        const result = await musicModel.generateContent(contextPrompt);
-        const musicChoice = result.response.text().trim();
-
-        console.log("Respuesta música para personaje", charId, ":", musicChoice);
-
-        res.json({ music: musicChoice });
-=======
         console.log("Narrativa recibida (últimos 150 chars):", narrative.slice(-150));
         console.log("Estado del personaje:", char.state?.name || "Normal");
         console.log("Respuesta IA bruta:", musicChoice);
         console.log("Música final para personaje", charId, ":", finalChoice);
 
         res.json({ music: finalChoice });
->>>>>>> 5c4870003c06c0c7707be272ca9b61267a1d4cc3
     } catch (error) {
         console.error("Error obteniendo música:", error);
         res.status(500).json({ error: "Error generando música" });
