@@ -1199,12 +1199,10 @@ app.get('/sellitem/:itemId', async (req, res) => {
         const rows2 = user.rows ?? user[0];
         const id = rows2[0].user_id;
 
-        const sell = await db.query(
+        await db.query(
             'UPDATE "user" SET coins = coins + $1 WHERE id = $2',
             [price, id]
         );
-
-        console.log('Item sold' + price + " USER " + id)
 
         const result = await db.query(`
         DELETE FROM item WHERE id= $1
@@ -1277,6 +1275,102 @@ app.post('/market/buyitem', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ message: 'Error al procesar la compra' });
+    }
+});
+
+//endpoint para cambiar el item de un personaje a otro del mismo usuario
+app.post('/changeitem', async (req, res) => {
+    try {
+        const { itemId, fromCharacterId, toCharacterId, userId } = req.body;
+
+        if (!itemId || !fromCharacterId || !toCharacterId || !userId) {
+            return res.status(400).json({ message: 'itemId, fromCharacterId, toCharacterId y userId son requeridos' });
+        }
+
+        const itemResult = await db.query(
+            'SELECT * FROM item WHERE id = $1 AND character_id = $2 AND on_market = false',
+            [itemId, fromCharacterId]
+        );
+        if (itemResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Item no encontrado en el personaje o está en el market' });
+        }
+
+        const charactersResult = await db.query(
+            'SELECT id, user_id FROM character WHERE id = ANY($1)',
+            [[fromCharacterId, toCharacterId]]
+        );
+
+        if (charactersResult.rows.length !== 2) {
+            return res.status(404).json({ message: 'Uno o ambos personajes no existen' });
+        }
+
+        const fromChar = charactersResult.rows.find((c: any) => c.id == fromCharacterId);
+        const toChar = charactersResult.rows.find((c: any) => c.id == toCharacterId);
+
+        if (fromChar.user_id !== userId || toChar.user_id !== userId) {
+            return res.status(403).json({ message: 'Uno o ambos personajes no pertenecen al usuario' });
+        }
+
+        if (fromChar.user_id !== toChar.user_id) {
+            return res.status(403).json({ message: 'No puedes transferir items entre personajes de diferentes usuarios' });
+        }
+        await db.query(
+            'UPDATE item SET character_id = $1 WHERE id = $2',
+            [toCharacterId, itemId]
+        );
+
+        res.json({ message: 'Item transferido exitosamente' });
+    }
+    catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Error al transferir el item' });
+    }
+});
+
+//endpoint para retirar el item del market y devolverlo al personaje original
+app.post('/market/removeitem', async (req, res) => {
+    try {
+        const { itemId, sellerId } = req.body;
+
+        if (!itemId || !sellerId) {
+            return res.status(400).json({ message: 'itemId y sellerId son requeridos' });
+        }
+
+        const itemResult = await db.query(
+            'SELECT * FROM item WHERE id = $1 AND seller_id = $2 AND on_market = true',
+            [itemId, sellerId]
+        );
+        if (itemResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Item no encontrado en el market para este vendedor' });
+        }
+        const item = itemResult.rows[0];
+
+        if (!item.character_id) {
+            return res.status(400).json({ message: 'El item no tiene un personaje asignado' });
+        }
+        const charResult = await db.query(
+            'SELECT user_id FROM character WHERE id = $1',
+            [item.character_id]
+        );
+        if (charResult.rows.length === 0) {
+            return res.status(404).json({ message: 'El personaje original ya no existe' });
+        }
+        if (charResult.rows[0].user_id !== sellerId) {
+            return res.status(403).json({ message: 'El personaje no pertenece al vendedor' });
+        }
+        await db.query(
+            'UPDATE item SET on_market = false, market_price = NULL, seller_id = NULL WHERE id = $1',
+            [itemId]
+        );
+
+        res.json({
+            message: 'Item retirado del market exitosamente',
+            characterId: item.character_id
+        });
+    }
+    catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Error al retirar el item del market' });
     }
 });
 
