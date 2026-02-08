@@ -1408,7 +1408,10 @@ app.get("/music/:charId", async (req, res) => {
 
         let contextPrompt = `Basándote en la siguiente narrativa de un juego de rol de fantasía, responde SOLO con una de estas palabras exactas: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión". 
 
-        IMPORTANTE: Analiza lo que está pasando en la ÚLTIMA parte de la narrativa (lo más reciente) para elegir la música adecuada.
+        IMPORTANTE: Analiza lo que está pasando en la parte de la narrativa (lo más reciente) para elegir la música adecuada.
+        La narrativa tiene PRIORIDAD sobre el estado del personaje para elegir la música.
+        Las opciones de música representan el ambiente y la emoción predominante en la escena actual, no solo lo que el personaje está haciendo, sino también lo que está experimentando o enfrentando.
+        La narrativa incluye elecciones como A, B, C pero el jugador aún NO ha actuado, así que no asumas que la elección ya se ha resuelto, elige la música según el ambiente de la narrativa, no asumas resultados futuros.
 
         NARRATIVA RECIENTE:
         ${narrative}
@@ -1418,12 +1421,33 @@ app.get("/music/:charId", async (req, res) => {
         - Estado: ${char.state ? char.state.name : "Normal"}
         ${char.state && char.state.description ? `- ${char.state.description}` : ''}
 
-        CATEGORÍAS DE MÚSICA:
-        - "Combate": El personaje está luchando activamente , en batalla, atacando o defendiéndose
-        - "Tensión": Hay peligro inminente, enemigos cerca, pero aún NO está en combate activo
-        - "Misterio": Situaciones enigmáticas, sobrenaturales, lugares oscuros inexplorados
-        - "Exploración": Viajando, caminando, explorando de forma tranquila sin peligro
-        - "Descanso": En lugares seguros, ciudades, tabernas, descansando, conversando
+        CATEGORÍAS DE MÚSICA (en orden de prioridad: Combate > Tensión > Misterio > Exploración > Descanso):
+        
+        - "Combate": El personaje está ACTIVAMENTE luchando en batalla, golpeando, recibiendo daño, esquivando ataques.
+          NO uses "Combate" si aún no hay intercambio de golpes o daño real, aunque el personaje esté armado o preparándose.
+        
+        - "Tensión": El personaje está CONFRONTANDO el peligro directamente - persiguiendo enemigos, siendo perseguido, enemigos visibles acercándose, cuenta regresiva, trampas activándose.
+          Si el entorno es oscuro o inquietante pero NO hay amenaza activa ni cuenta regresiva, usa "Misterio", no "Tensión".
+        
+        - "Misterio": Situaciones enigmáticas, sobrenaturales, sonidos extraños sin origen visible, lugares oscuros sin explorar, descubrimientos inquietantes.
+          Usa MISTERIO si solo hay indicios de peligro pero el personaje aún NO está actuando contra él.
+          Si el entorno genera inquietud, sospecha o presagio, usa "Misterio" en lugar de "Exploración".
+          Si la narrativa es exploración, interacción social o avance normal, prioriza 'Exploración' o 'Descanso' u otras que no impliquen peligro o misterio. No elijas 'Misterio' solo porque el juego es de fantasía o D&D.
+        
+          - "Exploración": Desplazamiento o descubrimiento de entornos SIN carga emocional fuerte.
+          Caminando, viajando, observando paisajes, recorriendo caminos, explorando zonas conocidas o seguras.
+          Si el entorno genera inquietud, sospecha o presagio, usa "Misterio" en lugar de "Exploración".
+        
+        - "Descanso": Escenas SEGURAS y estables, sin tensión ni misterio.
+          Incluye: conversar con aliados o NPCs amigables, mercados, tabernas, campamentos protegidos, celebraciones, planificación tranquila.
+          No requiere dormir ni curarse; basta con que el entorno sea claramente seguro y relajado.
+          NO uses "Descanso" si hay peligro latente, inquietud, secretos o amenazas implícitas, aunque nadie esté atacando.
+          Si la escena podría resolverse con diálogo tranquilo sin riesgo, usa "Descanso".
+          Si requiere atención, cautela o genera incomodidad, usa "Misterio" o "Exploración".
+
+        REGLAS CLAVE:
+        - Si la narrativa termina con opciones para que el jugador decida (A, B, C...) y aún NO ha actuado, usa "Misterio" o "Exploración" según el ambiente, NO uses "Tensión" todavía.
+        - Si se cumplen condiciones de varias categorías, elige la MÁS ALTA según la prioridad: Combate > Tensión > Misterio > Exploración > Descanso
 
         Responde ÚNICAMENTE con UNA de estas palabras exactas sin ningún otro texto.`;
 
