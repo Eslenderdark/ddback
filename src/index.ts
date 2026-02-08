@@ -815,16 +815,40 @@ app.post('/inventory/sell', async (req, res) => {
 });
 
 app.post('/market/add', async (req, res) => {
-    const { itemId, price } = req.body;
+    try {
+        const { itemId, price, sellerId } = req.body;
 
-    await db.query(
-        `UPDATE item 
-     SET on_market=true, market_price=$1 
-     WHERE id=$2`,
-        [price, itemId]
-    );
+        if (!itemId || !price || !sellerId) {
+            return res.status(400).json({ error: 'itemId, price y sellerId son requeridos' });
+        }
 
-    res.json({ message: "Publicado" });
+        const itemCheck = await db.query(
+            `SELECT * FROM item WHERE id = $1`,
+            [itemId]
+        );
+
+        if (itemCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Item no encontrado' });
+        }
+
+        if (itemCheck.rows[0].on_market) {
+            return res.status(400).json({ error: 'El item ya está en el market' });
+        }
+
+        await db.query(
+            `UPDATE item 
+             SET on_market = true, market_price = $1, seller_id = $2 
+             WHERE id = $3`,
+            [price, sellerId, itemId]
+        );
+
+        console.log(`Item ${itemId} publicado en el market por ${sellerId} a ${price} monedas`);
+
+        res.json({ message: "Publicado en el market exitosamente" });
+    } catch (e) {
+        console.error('Error publicando item en market:', e);
+        res.status(500).json({ error: 'Error al publicar el item en el market' });
+    }
 });
 
 
