@@ -170,7 +170,7 @@ let gameResponse = {
     response: ''
 }
 let userpromt = '' // Variable para almacenar la respuesta del usuario
-const chat = model.startChat({ //Creamos el chat donde se guardan las conversaciones para que el LLM tenga contexto y responda coherentemente
+let chat = model.startChat({ //Creamos el chat donde se guardan las conversaciones para que el LLM tenga contexto y responda coherentemente
     history: [], // Empieza vacia
 })
 
@@ -239,6 +239,10 @@ app.get('/gemini/:charId', async (req, res) => {
         );
 
         console.log('Items del personaje cargados:', objects.rows);
+
+        // Reiniciar el chat para asegurar que cada partida empieza con historial limpio
+        chat = model.startChat({ history: [] });
+        console.log('Nuevo chat iniciado para el personaje');
 
         // 3. Preparar prompt con el personaje concreto y los items
         const promptFinal = promtNarrativa.replace(
@@ -379,7 +383,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         `;
 
         console.log('Respuesta efectuada cargando promt...')
-        const result = await chat.sendMessage(userpromt); // Se lo enviamos
+        // Enviar la opción con contexto claro para que la IA entienda que es una elección del juego
+        const contextualPrompt = `El jugador ha elegido la opción ${userpromt}. Continúa la narrativa del juego basándote en esta elección.`;
+        const result = await chat.sendMessage(contextualPrompt);
         const response = await result.response;
 
 
@@ -403,7 +409,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         console.log('Estadísticas extraídas del JSON:', stats);
         if (stats.hp === undefined || stats.hp === null) {
             console.log('Estadística de vida (hp) no encontrada en el JSON, reintentando...');
-            const result = await chat.sendMessage(userpromt); // Se lo enviamos
+            // En el reintento también usar contexto claro
+            const contextualPrompt = `El jugador ha elegido la opción ${userpromt}. Continúa la narrativa del juego basándote en esta elección.`;
+            const result = await chat.sendMessage(contextualPrompt);
             const response = await result.response;
 
             const statsResult = await chat.sendMessage(statsPrompt);
@@ -514,6 +522,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             character[0].run = false
             character[0].hp = 0
             console.log('MUERTO')
+            // Reiniciar el chat para limpiar el historial de la partida terminada
+            chat = model.startChat({ history: [] });
+            console.log('Historial del chat limpiado (muerte)')
         }
 
         console.log('character.run: ' + character[0].run + ' y character.alive: ' + character[0].alive)
@@ -528,6 +539,9 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
             )
             console.log('MONEDAS TOTALES:' + monedas)
             console.log('VICTORIA VICTORIA VICTORIA VICTORIA VICTORIA')
+            // Reiniciar el chat para limpiar el historial de la partida terminada
+            chat = model.startChat({ history: [] });
+            console.log('Historial del chat limpiado (victoria)')
         }
 
 
@@ -1406,50 +1420,70 @@ app.get("/music/:charId", async (req, res) => {
 
         const musicModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-        let contextPrompt = `Basándote en la siguiente narrativa de un juego de rol de fantasía, responde SOLO con una de estas palabras exactas: "Combate", "Exploración", "Misterio", "Descanso" o "Tensión". 
+        let contextPrompt = `Basándote en la siguiente narrativa de un juego de rol de fantasía, responde SOLO con una de estas palabras exactas:
+"Combate", "Exploración", "Misterio", "Descanso" o "Tensión".
 
-        IMPORTANTE: Analiza lo que está pasando en la parte de la narrativa (lo más reciente) para elegir la música adecuada.
-        La narrativa tiene PRIORIDAD sobre el estado del personaje para elegir la música.
-        Las opciones de música representan el ambiente y la emoción predominante en la escena actual, no solo lo que el personaje está haciendo, sino también lo que está experimentando o enfrentando.
-        La narrativa incluye elecciones como A, B, C pero el jugador aún NO ha actuado, así que no asumas que la elección ya se ha resuelto, elige la música según el ambiente de la narrativa, no asumas resultados futuros.
+IMPORTANTE:
+- Analiza lo que está ocurriendo en la PARTE MÁS RECIENTE de la narrativa.
+- La narrativa tiene PRIORIDAD sobre el estado del personaje.
+- La música representa el ambiente y la emoción predominante de la escena actual.
+- NO asumas resultados futuros ni decisiones aún no tomadas.
 
-        NARRATIVA RECIENTE:
-        ${narrative}
+NARRATIVA RECIENTE:
+${narrative}
 
-        INFORMACIÓN DEL PERSONAJE:
-        - Nombre: ${char.name}
-        - Estado: ${char.state ? char.state.name : "Normal"}
-        ${char.state && char.state.description ? `- ${char.state.description}` : ''}
+INFORMACIÓN DEL PERSONAJE:
+- Nombre: ${char.name}
+- Estado: ${char.state ? char.state.name : "Normal"}
+${char.state && char.state.description ? `- ${char.state.description}` : ""}
 
-        CATEGORÍAS DE MÚSICA (en orden de prioridad: Combate > Tensión > Misterio > Exploración > Descanso):
-        
-        - "Combate": El personaje está ACTIVAMENTE luchando en batalla, golpeando, recibiendo daño, esquivando ataques.
-          NO uses "Combate" si aún no hay intercambio de golpes o daño real, aunque el personaje esté armado o preparándose.
-        
-        - "Tensión": El personaje está CONFRONTANDO el peligro directamente - persiguiendo enemigos, siendo perseguido, enemigos visibles acercándose, cuenta regresiva, trampas activándose.
-          Si el entorno es oscuro o inquietante pero NO hay amenaza activa ni cuenta regresiva, usa "Misterio", no "Tensión".
-        
-        - "Misterio": Situaciones enigmáticas, sobrenaturales, sonidos extraños sin origen visible, lugares oscuros sin explorar, descubrimientos inquietantes.
-          Usa MISTERIO si solo hay indicios de peligro pero el personaje aún NO está actuando contra él.
-          Si el entorno genera inquietud, sospecha o presagio, usa "Misterio" en lugar de "Exploración".
-          Si la narrativa es exploración, interacción social o avance normal, prioriza 'Exploración' o 'Descanso' u otras que no impliquen peligro o misterio. No elijas 'Misterio' solo porque el juego es de fantasía o D&D.
-        
-          - "Exploración": Desplazamiento o descubrimiento de entornos SIN carga emocional fuerte.
-          Caminando, viajando, observando paisajes, recorriendo caminos, explorando zonas conocidas o seguras.
-          Si el entorno genera inquietud, sospecha o presagio, usa "Misterio" en lugar de "Exploración".
-        
-        - "Descanso": Escenas SEGURAS y estables, sin tensión ni misterio.
-          Incluye: conversar con aliados o NPCs amigables, mercados, tabernas, campamentos protegidos, celebraciones, planificación tranquila.
-          No requiere dormir ni curarse; basta con que el entorno sea claramente seguro y relajado.
-          NO uses "Descanso" si hay peligro latente, inquietud, secretos o amenazas implícitas, aunque nadie esté atacando.
-          Si la escena podría resolverse con diálogo tranquilo sin riesgo, usa "Descanso".
-          Si requiere atención, cautela o genera incomodidad, usa "Misterio" o "Exploración".
+CATEGORÍAS DE MÚSICA (en orden de prioridad):
+Combate > Tensión > Misterio > Exploración > Descanso
 
-        REGLAS CLAVE:
-        - Si la narrativa termina con opciones para que el jugador decida (A, B, C...) y aún NO ha actuado, usa "Misterio" o "Exploración" según el ambiente, NO uses "Tensión" todavía.
-        - Si se cumplen condiciones de varias categorías, elige la MÁS ALTA según la prioridad: Combate > Tensión > Misterio > Exploración > Descanso
+DEFINICIONES:
 
-        Responde ÚNICAMENTE con UNA de estas palabras exactas sin ningún otro texto.`;
+- "Combate":
+  El enemigo o el personaje YA ha iniciado una acción hostil directa.
+  Incluye: atacar, abalanzarse, disparar, lanzar hechizos, intercambio inminente de golpes.
+  Usa "Combate" incluso si la narrativa termina con opciones A, B, C
+  SIEMPRE que una acción hostil ya haya comenzado.
+
+- "Tensión":
+  El peligro es INMINENTE pero aún NO ha comenzado el combate.
+  Ejemplos: persecuciones, enemigos visibles acercándose,
+  trampas activándose, cuenta regresiva, huida bajo presión.
+
+- "Misterio":
+  Situaciones inquietantes o desconocidas SIN acción hostil directa.
+  Sonidos extraños, presencias ocultas, lugares oscuros,
+  indicios de peligro sin confrontación.
+
+- "Exploración":
+  Desplazamiento o descubrimiento sin carga emocional fuerte.
+  Viajar, caminar, observar paisajes, explorar zonas seguras o conocidas.
+
+- "Descanso":
+  Escenas SEGURAS y estables, sin peligro ni inquietud.
+  Conversaciones amistosas, tabernas, mercados, campamentos protegidos,
+  planificación tranquila.
+
+REGLAS CLAVE:
+- NO es Combate: trampas, encantamientos automáticos, defensas mágicas pasivas, daño ambiental sin enemigo activo
+
+- EXCEPCIÓN IMPORTANTE - Detección de Jefes:
+    Si la narrativa contiene indicadores de que el personaje ha encontrado un JEFE, usa "Combate" inmediatamente o "Tensión" como veas mejor.
+    Indicadores de jefe: frases como "has encontrado un jefe", "ADVERTENCIA: HAS ENCONTRADO UN JEFE", 
+    "jefe", "boss", o el nombre de una criatura seguido de puntos de vida altos (ejemplo: "Sombra del Vacío: 200 de vida").
+    Esta regla tiene PRIORIDAD sobre la definición normal de "Combate".
+
+- Si la narrativa termina con opciones A, B, C y NO hay acción hostil directa iniciada por nadie, y el peligro inmediato ha pasado (por ejemplo, tras resolver un encuentro de forma pacífica, obtener una recompensa o cuando el ambiente es seguro y hay varias rutas para elegir), PRIORIZA "Exploración" sobre "Misterio".
+    Usa "Misterio" solo si el ambiente sigue siendo inquietante, hay secretos sin resolver o el entorno es claramente enigmático.
+
+- Si varias categorías aplican, elige la MÁS ALTA según la prioridad:
+    Combate > Tensión > Misterio > Exploración > Descanso
+
+Responde ÚNICAMENTE con UNA de estas palabras exactas y nada más.
+`;
 
         const result = await musicModel.generateContent(contextPrompt);
         let musicChoice = result.response.text().trim();
