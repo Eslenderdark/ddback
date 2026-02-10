@@ -31,7 +31,7 @@ const character = [
     }
 ];
 
-const genAI = new GoogleGenerativeAI(env.environment.api_key)
+const genAI = new GoogleGenerativeAI(process.env.api_key || env.environment.api_key)
 const promtNarrativa = `Créame el comienzo de una historia de fantasía estilo dungeons and dragons para un juego, 
 nárrame la historia como si ya estuviese en el juego, al final de esta historia necesito que me des tres opciones 
 distintas de acciones que pueda realizar el jugador, estas acciones deben de tener coherencia con la historia que
