@@ -210,6 +210,11 @@ app.get('/gemini/:charId', async (req, res) => {
             [charId]
         );
 
+        const userResult = await db.query(
+            `SELECT coins FROM "user" WHERE id = $1`,
+            [result.rows[0].user_id]
+        );
+
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Personaje no encontrado' });
         }
@@ -227,7 +232,8 @@ app.get('/gemini/:charId', async (req, res) => {
             alive: char.alive,
             run: true,
             state: char.state || { name: "", description: "" },
-            xp: char.xp || 0
+            xp: char.xp || 0,
+            coins: userResult.rows[0].coins
         }];
 
         user = char.user_id
