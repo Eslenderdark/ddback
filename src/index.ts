@@ -384,7 +384,10 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
 
         console.log('Respuesta efectuada cargando promt...')
         // Enviar la opción con contexto claro para que la IA entienda que es una elección del juego
-        const contextualPrompt = `El jugador ha elegido la opción ${userpromt}. Continúa la narrativa del juego basándote en esta elección.`;
+        const contextualPrompt = `El jugador ha elegido la opción ${userpromt}. Continúa la narrativa del juego basándote en esta elección. Recuerda que
+        el juego esta basado en la historia anterior yq ued ebes continuar narrando esa historia con la accion elegida por el jugador. Receurda 
+        hacerlo de forma narrativa y sin mostrar el JSON de las estadisticas en el texto, solo muestra los cambios de estadisticas de forma visual y clara para el jugador.
+        Recuerda hacerlo todo en español y en forma de narrativa fantasctica de dungeons and dragons, no muestres el pensamiento detras de cada respuesta, solo la narrativa.`;
         const result = await chat.sendMessage(contextualPrompt);
         const response = await result.response;
 
