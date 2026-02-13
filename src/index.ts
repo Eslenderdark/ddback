@@ -157,6 +157,7 @@ El array de los items que tiene el personaje {{ITEMS_ARRAY}}` // Prompt inicial
 
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Escogemos el modelo del LLM que queremos usar
 let gameResponse = {
+    name: '',
     id: 0,
     description: '',
     hp: 0,
@@ -336,6 +337,7 @@ con las estadísticas ACTUALES del jugador tras la última acción realizada.
 El formato debe ser EXACTAMENTE este:
 
 {
+  "name": string, 
   "hp": number,
   "strength": number,
   "agility": number,
@@ -499,6 +501,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         }   // Aseguramos que la vida no sea negativa
 
         gameResponse = {
+            name: stats.name,
             id: idchar,
             description: '',
 
