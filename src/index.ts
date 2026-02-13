@@ -261,6 +261,8 @@ app.get('/gemini/:charId', async (req, res) => {
         const geminiResult = await chat.sendMessage(promptFinal);
         const narrative = (await geminiResult.response).text();
 
+        gameResponse.name = char.name;
+
         // 5. Respuesta única y completa para el frontend
         res.json({
             character: characterArray[0],     // personaje fresco (con id real)
@@ -337,7 +339,6 @@ con las estadísticas ACTUALES del jugador tras la última acción realizada.
 El formato debe ser EXACTAMENTE este:
 
 {
-  "name": string, 
   "hp": number,
   "strength": number,
   "agility": number,
@@ -501,7 +502,7 @@ QUERO QUE TU RESPUESTA SEA UNICAMENTE RELLENAR EL JSON DEFINIDO ANTERIORMENTE CO
         }   // Aseguramos que la vida no sea negativa
 
         gameResponse = {
-            name: stats.name,
+            name: gameResponse.name,
             id: idchar,
             description: '',
 
